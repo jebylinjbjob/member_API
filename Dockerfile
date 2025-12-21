@@ -16,6 +16,7 @@ COPY --from=builder /src/member_api ./member_api
 
 EXPOSE 8080
 ENV POSTGRES_DSN=postgres://postgres:postgres@db:5432/member_api?sslmode=disable
+ENV JWT_SECRET=your-secret-key-change-in-production
 
 USER 65532:65532
 
