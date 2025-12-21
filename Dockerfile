@@ -17,7 +17,6 @@ WORKDIR /app
 COPY --from=builder /src/member_api ./member_api
 
 EXPOSE 8080
-ENV POSTGRES_DSN=postgres://postgres:postgres@db:5432/member_api?sslmode=disable
 
 USER 65532:65532
 
