@@ -257,10 +257,6 @@ go vet ./...
 - [認證功能使用指南](docs/AUTHENTICATION.md)
 - [Swagger API 文檔使用指南](docs/SWAGGER.md)
 
-## 授權
-
-本專案使用 Apache 2.0 授權。
-
 ## 貢獻
 
 歡迎提交 Issue 和 Pull Request！
