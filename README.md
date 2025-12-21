@@ -126,11 +126,13 @@ docker build -t member-api .
 
 ### 運行容器
 
+使用環境變數傳遞配置（**重要**：切勿在 Dockerfile 中硬編碼密鑰）：
+
 ```bash
 docker run -d \
   -p 8080:8080 \
   -e POSTGRES_DSN="postgres://postgres:postgres@host.docker.internal:5432/member_api?sslmode=disable" \
-  -e JWT_SECRET="your-secret-key" \
+  -e JWT_SECRET="$(openssl rand -base64 32)" \
   --name member-api \
   member-api
 ```
@@ -247,10 +249,11 @@ go vet ./...
 ## 安全注意事項
 
 1. **JWT Secret**: 生產環境務必設置強隨機的 `JWT_SECRET`
-2. **密碼強度**: 實施強密碼策略
-3. **HTTPS**: 生產環境必須使用 HTTPS
-4. **環境變數**: 切勿將 `.env` 文件提交到版本控制
-5. **資料庫**: 使用安全的資料庫連線和存取控制
+2. **Docker 密鑰**: 切勿在 Dockerfile 中硬編碼密鑰，應在運行時通過 `-e` 參數傳入
+3. **密碼強度**: 實施強密碼策略
+4. **HTTPS**: 生產環境必須使用 HTTPS
+5. **環境變數**: 切勿將 `.env` 文件提交到版本控制
+6. **資料庫**: 使用安全的資料庫連線和存取控制
 
 ## 文檔
 
