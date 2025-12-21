@@ -124,11 +124,7 @@ go run main.go
 # 標準構建方式
 docker build -t member-api .
 
-# 如果遇到 TLS/證書錯誤，請使用以下命令：
-DOCKER_BUILDKIT=0 docker build -t member-api .
-```
 
-**注意**：在某些環境中使用 Docker BuildKit 時可能會遇到 TLS 證書驗證問題。如果遇到此問題，請使用 `DOCKER_BUILDKIT=0` 來禁用 BuildKit 進行構建。
 
 ### 運行容器
 

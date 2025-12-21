@@ -1,6 +1,5 @@
 # Dockerfile for Member API
 # Build with: docker build -t member-api .
-# If you encounter TLS/certificate errors, try: DOCKER_BUILDKIT=0 docker build -t member-api .
 
 FROM golang:1.24 AS builder
 WORKDIR /src
