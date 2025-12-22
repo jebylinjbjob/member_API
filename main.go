@@ -13,6 +13,7 @@ import (
 	"member_API/routes"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv" // 新增
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
@@ -49,6 +50,7 @@ func initPostgreSQL() error {
 
 	dsn := os.Getenv("POSTGRES_DSN")
 	if dsn == "" {
+		log.Println("Warning: POSTGRES_DSN environment variable not set. Using default DSN for local development.")
 		return nil 
 	}
 
@@ -108,6 +110,11 @@ func HealthCheck(c *gin.Context) {
 }
 
 func main() {
+	// 載入 .env 文件
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, using environment variables")
+	}
+
 	// 初始化 PostgreSQL 連接
 	err := initPostgreSQL()
 	if err != nil {
