@@ -140,8 +140,6 @@ docker pull ghcr.io/jebylinjbjob/member_api:v1.0.0
 
 ### 運行容器
 
-使用環境變數傳遞配置（**重要**：切勿在 Dockerfile 中硬編碼密鑰）：
-
 ```bash
 docker run -d \
   -p 8080:8080 \
