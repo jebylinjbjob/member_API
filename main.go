@@ -51,7 +51,7 @@ func initPostgreSQL() error {
 	dsn := os.Getenv("POSTGRES_DSN")
 	if dsn == "" {
 		log.Println("Warning: POSTGRES_DSN environment variable not set. Using default DSN for local development.")
-		return nil 
+		return nil
 	}
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -84,6 +84,10 @@ func initPostgreSQL() error {
 	log.Println("Connected to PostgreSQL!")
 	return nil
 }
+func setupGraphQL() error {
+	// 初始化 GraphQL 處理器
+	return graphql.SetupGraphQL(db)
+}
 
 // HealthCheck 健康檢查端點
 // @Summary 健康檢查
@@ -110,32 +114,33 @@ func HealthCheck(c *gin.Context) {
 }
 
 func main() {
+
 	// 載入 .env 文件
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 
 	// 初始化 PostgreSQL 連接
-	err := initPostgreSQL()
-	if err != nil {
+	if err := initPostgreSQL(); err != nil {
 		log.Printf("Warning: PostgreSQL connection failed: %v\n", err)
 		log.Println("Starting server without PostgreSQL connection...")
-		// initialize GraphQL without DB
-		if err := graphql.SetupGraphQL(nil); err != nil {
-			log.Printf("Warning: GraphQL setup failed: %v\n", err)
-		} else {
-			log.Println("GraphQL schema initialized (without DB)!")
-		}
+
 	} else {
 		defer func() {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Close(); err != nil {
 					log.Printf("Error closing PostgreSQL connection: %v\n", err)
 				}
+
 			} else {
 				log.Printf("Error retrieving SQL DB handle: %v\n", err)
 			}
 		}()
+	}
+
+	// 初始化 GraphQL
+	if err := setupGraphQL(); err != nil {
+		log.Fatalf("GraphQL setup failed: %v\n", err)
 	}
 
 	// 創建 Gin 路由器

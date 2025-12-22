@@ -10,6 +10,6 @@ type Member struct {
 	PasswordHash string    `gorm:"size:255" json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
-	isDeleted    bool      `gorm:"default:false" json:"-"`
-	deletedAt   *time.Time `json:"-"`
+	IsDeleted    bool      `gorm:"default:false" json:"-"`
+	DeletedAt   *time.Time `json:"-"`
 }
