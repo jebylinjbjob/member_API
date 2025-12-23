@@ -29,7 +29,6 @@ coverage.*
 .env
 .env.*
 !.env.example
-!.env.watchtower
 .envrc
 
 # IDE/editor
