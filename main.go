@@ -95,7 +95,7 @@ func initPostgreSQL() error {
 // @Router /health [get]
 func HealthCheck(c *gin.Context) {
 	status := "OK"
-	dbStatus := "Connected_OK"
+	dbStatus := "Connected"
 	if db == nil {
 		dbStatus = "Disconnected"
 	} else if sqlDB, err := db.DB(); err != nil {
