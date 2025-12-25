@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY --from=builder /src/member_api ./member_api
 
-EXPOSE 8080
+EXPOSE 9876
 
 USER 65532:65532
 
