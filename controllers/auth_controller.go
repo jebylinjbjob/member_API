@@ -6,6 +6,7 @@ import (
 
 	"member_API/auth"
 	"member_API/models"
+	"member_API/repositories"
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
@@ -53,7 +54,8 @@ func Register(input *gin.Context) {
 	}
 
 	// 使用 Service 層建立會員（自動處理密碼加密、審計欄位等）
-	svc := services.NewMemberService(db)
+	repo := repositories.NewGormMemberRepository(db)
+	svc := services.NewMemberService(repo)
 
 	// 註冊時使用 creatorId = 0 表示自行註冊
 	member, err := svc.CreateMember(req.Name, req.Email, req.Password, 0)

@@ -4,24 +4,26 @@ import (
 	"errors"
 	"member_API/auth"
 	"member_API/models"
+	"member_API/repositories"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type MemberService struct {
-	DB *gorm.DB
+	repo repositories.MemberRepository
 }
 
-func NewMemberService(db *gorm.DB) *MemberService {
-	return &MemberService{DB: db}
+func NewMemberService(repo repositories.MemberRepository) *MemberService {
+	return &MemberService{repo: repo}
 }
 
 // CreateMember 建立新會員
 func (s *MemberService) CreateMember(name, email, password string, creatorId uint) (*models.Member, error) {
 	// 檢查 email 是否已存在
-	var exists models.Member
-	if err := s.DB.Where("email = ? AND is_deleted = ?", email, false).First(&exists).Error; err == nil {
+	exists, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	if exists != nil {
 		return nil, errors.New("email 已被使用")
 	}
 
@@ -43,7 +45,7 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uin
 		PasswordHash: hash,
 	}
 
-	if err := s.DB.Create(member).Error; err != nil {
+	if err := s.repo.Create(member); err != nil {
 		return nil, err
 	}
 
@@ -52,12 +54,12 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uin
 
 // UpdateMember 更新會員資訊
 func (s *MemberService) UpdateMember(id uint, name, email string, modifierId uint) (*models.Member, error) {
-	var member models.Member
-	if err := s.DB.Where("is_deleted = ?", false).First(&member, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("會員不存在")
-		}
+	member, err := s.repo.FindByID(id)
+	if err != nil {
 		return nil, err
+	}
+	if member == nil {
+		return nil, errors.New("會員不存在")
 	}
 
 	now := time.Now()
@@ -66,53 +68,31 @@ func (s *MemberService) UpdateMember(id uint, name, email string, modifierId uin
 	member.LastModificationTime = &now
 	member.LastModifierId = modifierId
 
-	if err := s.DB.Save(&member).Error; err != nil {
+	if err := s.repo.Update(member); err != nil {
 		return nil, err
 	}
 
-	return &member, nil
+	return member, nil
 }
 
 // DeleteMember 軟刪除會員
 func (s *MemberService) DeleteMember(id uint, deleterId uint) error {
-	now := time.Now()
-	result := s.DB.Model(&models.Member{}).
-		Where("id = ? AND is_deleted = ?", id, false).
-		Updates(map[string]interface{}{
-			"is_deleted":               true,
-			"deleted_at":               &now,
-			"last_modifier_id":         deleterId,
-			"last_modification_time":   &now,
-		})
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return errors.New("會員不存在或已被刪除")
-	}
-
-	return nil
+	return s.repo.SoftDelete(id, deleterId)
 }
 
 // GetMemberByID 取得單一會員
 func (s *MemberService) GetMemberByID(id uint) (*models.Member, error) {
-	var member models.Member
-	if err := s.DB.Where("is_deleted = ?", false).First(&member, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("會員不存在")
-		}
+	member, err := s.repo.FindByID(id)
+	if err != nil {
 		return nil, err
 	}
-	return &member, nil
+	if member == nil {
+		return nil, errors.New("會員不存在")
+	}
+	return member, nil
 }
 
 // GetMembers 取得會員列表
 func (s *MemberService) GetMembers(limit int) ([]models.Member, error) {
-	var members []models.Member
-	if err := s.DB.Where("is_deleted = ?", false).Limit(limit).Find(&members).Error; err != nil {
-		return nil, err
-	}
-	return members, nil
+	return s.repo.FindAll(limit)
 }

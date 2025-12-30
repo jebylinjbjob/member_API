@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"member_API/graphql/model"
 	"member_API/models"
+	"member_API/repositories"
 	"member_API/services"
 	"strconv"
 	"time"
@@ -17,7 +18,8 @@ import (
 
 // CreateMember is the resolver for the createMember field.
 func (r *mutationResolver) CreateMember(ctx context.Context, input model.CreateMemberInput) (*model.Member, error) {
-	svc := services.NewMemberService(r.DB)
+	repo := repositories.NewGormMemberRepository(r.DB)
+	svc := services.NewMemberService(repo)
 
 	// 從 context 取得使用者 ID（如果沒有則使用 0 表示系統建立）
 	creatorId := getUserIDFromContext(ctx)
@@ -32,7 +34,8 @@ func (r *mutationResolver) CreateMember(ctx context.Context, input model.CreateM
 
 // UpdateMember is the resolver for the updateMember field.
 func (r *mutationResolver) UpdateMember(ctx context.Context, id string, input model.UpdateMemberInput) (*model.Member, error) {
-	svc := services.NewMemberService(r.DB)
+	repo := repositories.NewGormMemberRepository(r.DB)
+	svc := services.NewMemberService(repo)
 
 	memberID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
@@ -52,7 +55,8 @@ func (r *mutationResolver) UpdateMember(ctx context.Context, id string, input mo
 
 // DeleteMember is the resolver for the deleteMember field.
 func (r *mutationResolver) DeleteMember(ctx context.Context, id string) (bool, error) {
-	svc := services.NewMemberService(r.DB)
+	repo := repositories.NewGormMemberRepository(r.DB)
+	svc := services.NewMemberService(repo)
 
 	memberID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
@@ -75,24 +79,24 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.Create
 		return nil, fmt.Errorf("database connection not configured")
 	}
 
+	repo := repositories.NewGormProductRepository(r.DB)
+	svc := services.NewProductService(repo)
+
 	creatorID := getUserIDFromContext(ctx)
 
-	product := models.Product{
-		ProductName:        input.ProductName,
-		ProductPrice:       input.ProductPrice,
-		ProductDescription: ptrToString(input.ProductDescription),
-		ProductImage:       ptrToString(input.ProductImage),
-		ProductStock:       input.ProductStock,
-		Base: models.Base{
-			CreatorId: creatorID,
-		},
-	}
-
-	if err := r.DB.Create(&product).Error; err != nil {
+	product, err := svc.CreateProduct(
+		input.ProductName,
+		input.ProductPrice,
+		ptrToString(input.ProductDescription),
+		ptrToString(input.ProductImage),
+		input.ProductStock,
+		creatorID,
+	)
+	if err != nil {
 		return nil, err
 	}
 
-	return productDBToModel(product), nil
+	return productDBToModel(*product), nil
 }
 
 // UpdateProduct is the resolver for the updateProduct field.
@@ -106,13 +110,10 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input m
 		return nil, fmt.Errorf("invalid product ID")
 	}
 
-	var product models.Product
-	if err := r.DB.Where("is_deleted = ?", false).First(&product, productID).Error; err != nil {
-		return nil, fmt.Errorf("product not found")
-	}
+	repo := repositories.NewGormProductRepository(r.DB)
+	svc := services.NewProductService(repo)
 
 	modifierID := getUserIDFromContext(ctx)
-	product.LastModifierId = modifierID
 
 	updates := make(map[string]interface{})
 	if input.ProductName != nil {
@@ -130,18 +131,13 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input m
 	if input.ProductStock != nil {
 		updates["product_stock"] = *input.ProductStock
 	}
-	updates["last_modifier_id"] = modifierID
 
-	if err := r.DB.Model(&product).Updates(updates).Error; err != nil {
+	product, err := svc.UpdateProduct(uint(productID), updates, modifierID)
+	if err != nil {
 		return nil, err
 	}
 
-	// Reload product
-	if err := r.DB.First(&product, productID).Error; err != nil {
-		return nil, err
-	}
-
-	return productDBToModel(product), nil
+	return productDBToModel(*product), nil
 }
 
 // DeleteProduct is the resolver for the deleteProduct field.
@@ -155,12 +151,12 @@ func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, 
 		return false, fmt.Errorf("invalid product ID")
 	}
 
-	var product models.Product
-	if err := r.DB.Where("is_deleted = ?", false).First(&product, productID).Error; err != nil {
-		return false, fmt.Errorf("product not found")
-	}
+	repo := repositories.NewGormProductRepository(r.DB)
+	svc := services.NewProductService(repo)
 
-	if err := r.DB.Model(&product).Updates(map[string]interface{}{"is_deleted": true}).Error; err != nil {
+	deleterID := getUserIDFromContext(ctx)
+
+	if err := svc.DeleteProduct(uint(productID), deleterID); err != nil {
 		return false, err
 	}
 
@@ -172,11 +168,17 @@ func (r *queryResolver) Member(ctx context.Context, id string) (*model.Member, e
 	if r.DB == nil {
 		return nil, nil
 	}
-	var m models.Member
-	if err := r.DB.First(&m, id).Error; err != nil {
+	memberID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
 		return nil, nil
 	}
-	return dbToModel(m), nil
+	repo := repositories.NewGormMemberRepository(r.DB)
+	svc := services.NewMemberService(repo)
+	m, err := svc.GetMemberByID(uint(memberID))
+	if err != nil {
+		return nil, nil
+	}
+	return dbToModel(*m), nil
 }
 
 // Members is the resolver for the members field.
@@ -188,8 +190,10 @@ func (r *queryResolver) Members(ctx context.Context, limit *int) ([]*model.Membe
 	if limit != nil && *limit > 0 {
 		lim = *limit
 	}
-	var rows []models.Member
-	if err := r.DB.Select("id", "name", "email", "created_at", "updated_at").Limit(lim).Find(&rows).Error; err != nil {
+	repo := repositories.NewGormMemberRepository(r.DB)
+	svc := services.NewMemberService(repo)
+	rows, err := svc.GetMembers(lim)
+	if err != nil {
 		return nil, err
 	}
 	out := make([]*model.Member, len(rows))
@@ -205,12 +209,20 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 		return nil, nil
 	}
 
-	var product models.Product
-	if err := r.DB.Where("is_deleted = ?", false).First(&product, id).Error; err != nil {
+	productID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
 		return nil, nil
 	}
 
-	return productDBToModel(product), nil
+	repo := repositories.NewGormProductRepository(r.DB)
+	svc := services.NewProductService(repo)
+
+	product, err := svc.GetProductByID(uint(productID))
+	if err != nil {
+		return nil, nil
+	}
+
+	return productDBToModel(*product), nil
 }
 
 // Products is the resolver for the products field.
@@ -238,20 +250,11 @@ func (r *queryResolver) Products(ctx context.Context, limit *int, offset *int) (
 		off = *offset
 	}
 
-	var products []models.Product
-	var total int64
+	repo := repositories.NewGormProductRepository(r.DB)
+	svc := services.NewProductService(repo)
 
-	// Get total count
-	if err := r.DB.Model(&models.Product{}).Where("is_deleted = ?", false).Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// Get products
-	if err := r.DB.Where("is_deleted = ?", false).
-		Order("sort ASC, id DESC").
-		Limit(lim).
-		Offset(off).
-		Find(&products).Error; err != nil {
+	products, total, err := svc.GetProducts(lim, off)
+	if err != nil {
 		return nil, err
 	}
 
