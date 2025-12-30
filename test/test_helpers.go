@@ -56,10 +56,10 @@ func CleanupTestDB() {
 	if testDB != nil {
 		sqlDB, _ := testDB.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 		if dbPath != "" {
-			os.Remove(dbPath)
+			_ = os.Remove(dbPath)
 		}
 	}
 }
