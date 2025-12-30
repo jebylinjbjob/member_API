@@ -3,17 +3,16 @@ package services
 import (
 	"errors"
 	"member_API/models"
+	"member_API/repositories"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type ProductService struct {
-	DB *gorm.DB
+	repo repositories.ProductRepository
 }
 
-func NewProductService(db *gorm.DB) *ProductService {
-	return &ProductService{DB: db}
+func NewProductService(repo repositories.ProductRepository) *ProductService {
+	return &ProductService{repo: repo}
 }
 
 // CreateProduct 建立新產品
@@ -32,7 +31,7 @@ func (s *ProductService) CreateProduct(name string, price float64, description, 
 		ProductStock:       stock,
 	}
 
-	if err := s.DB.Create(product).Error; err != nil {
+	if err := s.repo.Create(product); err != nil {
 		return nil, err
 	}
 
@@ -41,81 +40,93 @@ func (s *ProductService) CreateProduct(name string, price float64, description, 
 
 // UpdateProduct 更新產品資訊
 func (s *ProductService) UpdateProduct(id uint, updates map[string]interface{}, modifierId uint) (*models.Product, error) {
-	var product models.Product
-	if err := s.DB.Where("is_deleted = ?", false).First(&product, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("產品不存在")
-		}
+	product, err := s.repo.FindByID(id)
+	if err != nil {
 		return nil, err
+	}
+	if product == nil {
+		return nil, errors.New("產品不存在")
 	}
 
 	now := time.Now()
 	updates["last_modification_time"] = &now
 	updates["last_modifier_id"] = modifierId
 
-	if err := s.DB.Model(&product).Updates(updates).Error; err != nil {
+	// 應用更新
+	for key, value := range updates {
+		switch key {
+		case "product_name":
+			if v, ok := value.(string); ok {
+				product.ProductName = v
+			}
+		case "product_price":
+			if v, ok := value.(float64); ok {
+				product.ProductPrice = v
+			}
+		case "product_description":
+			if v, ok := value.(string); ok {
+				product.ProductDescription = v
+			}
+		case "product_image":
+			if v, ok := value.(string); ok {
+				product.ProductImage = v
+			}
+		case "product_stock":
+			if v, ok := value.(int); ok {
+				product.ProductStock = v
+			}
+		case "last_modification_time":
+			if v, ok := value.(*time.Time); ok {
+				product.LastModificationTime = v
+			}
+		case "last_modifier_id":
+			if v, ok := value.(uint); ok {
+				product.LastModifierId = v
+			}
+		}
+	}
+
+	if err := s.repo.Update(product); err != nil {
 		return nil, err
 	}
 
-	// 重新載入產品資料
-	if err := s.DB.First(&product, id).Error; err != nil {
+	// 重新載入產品資料以確保取得最新資料
+	updatedProduct, err := s.repo.FindByID(id)
+	if err != nil {
 		return nil, err
 	}
 
-	return &product, nil
+	return updatedProduct, nil
 }
 
 // DeleteProduct 軟刪除產品
 func (s *ProductService) DeleteProduct(id uint, deleterId uint) error {
-	now := time.Now()
-	result := s.DB.Model(&models.Product{}).
-		Where("id = ? AND is_deleted = ?", id, false).
-		Updates(map[string]interface{}{
-			"is_deleted":             true,
-			"deleted_at":             &now,
-			"last_modifier_id":       deleterId,
-			"last_modification_time": &now,
-		})
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return errors.New("產品不存在或已被刪除")
-	}
-
-	return nil
+	return s.repo.SoftDelete(id, deleterId)
 }
 
 // GetProductByID 取得單一產品
 func (s *ProductService) GetProductByID(id uint) (*models.Product, error) {
-	var product models.Product
-	if err := s.DB.Where("is_deleted = ?", false).First(&product, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("產品不存在")
-		}
+	product, err := s.repo.FindByID(id)
+	if err != nil {
 		return nil, err
 	}
-	return &product, nil
+	if product == nil {
+		return nil, errors.New("產品不存在")
+	}
+	return product, nil
 }
 
 // GetProducts 取得產品列表（支持分頁）
 func (s *ProductService) GetProducts(limit, offset int) ([]models.Product, int64, error) {
-	var products []models.Product
-	var total int64
-
 	// 取得總數
-	if err := s.DB.Model(&models.Product{}).Where("is_deleted = ?", false).Count(&total).Error; err != nil {
+	total, err := s.repo.Count()
+	if err != nil {
 		return nil, 0, err
 	}
 
 	// 取得產品列表
-	if err := s.DB.Where("is_deleted = ?", false).
-		Order("sort ASC, id DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&products).Error; err != nil {
+	products, err := s.repo.FindAll(limit, offset)
+	if err != nil {
 		return nil, 0, err
 	}
 
