@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"member_API/repositories"
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
@@ -79,7 +80,8 @@ func GetProducts(c *gin.Context) {
 	}
 
 	// 使用 Service 層
-	svc := services.NewProductService(productDB)
+	repo := repositories.NewGormProductRepository(productDB)
+	svc := services.NewProductService(repo)
 	products, total, err := svc.GetProducts(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -136,7 +138,8 @@ func GetProductByID(c *gin.Context) {
 	}
 
 	// 使用 Service 層
-	svc := services.NewProductService(productDB)
+	repo := repositories.NewGormProductRepository(productDB)
+	svc := services.NewProductService(repo)
 	product, err := svc.GetProductByID(uint(productID))
 	if err != nil {
 		if err.Error() == "產品不存在" {
@@ -194,7 +197,8 @@ func CreateProduct(c *gin.Context) {
 	}
 
 	// 使用 Service 層
-	svc := services.NewProductService(productDB)
+	repo := repositories.NewGormProductRepository(productDB)
+	svc := services.NewProductService(repo)
 	product, err := svc.CreateProduct(
 		req.ProductName,
 		req.ProductPrice,
@@ -282,7 +286,8 @@ func UpdateProduct(c *gin.Context) {
 	}
 
 	// 使用 Service 層
-	svc := services.NewProductService(productDB)
+	repo := repositories.NewGormProductRepository(productDB)
+	svc := services.NewProductService(repo)
 	product, err := svc.UpdateProduct(uint(productID), updates, modifierID)
 	if err != nil {
 		if err.Error() == "產品不存在" {
@@ -342,7 +347,8 @@ func DeleteProduct(c *gin.Context) {
 	}
 
 	// 使用 Service 層
-	svc := services.NewProductService(productDB)
+	repo := repositories.NewGormProductRepository(productDB)
+	svc := services.NewProductService(repo)
 	if err := svc.DeleteProduct(uint(productID), deleterID); err != nil {
 		if err.Error() == "產品不存在或已被刪除" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
