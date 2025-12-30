@@ -288,7 +288,7 @@ func UpdateProduct(c *gin.Context) {
 	// 使用 Service 層
 	repo := repositories.NewGormProductRepository(productDB)
 	svc := services.NewProductService(repo)
-	product, err := svc.UpdateProduct(uint(productID), updates, modifierID)
+	product, err := svc.UpdateProduct(productID, updates, modifierID)
 	if err != nil {
 		if err.Error() == "產品不存在" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
