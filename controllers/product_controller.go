@@ -242,7 +242,7 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	productID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	productID, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
 		return
