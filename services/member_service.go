@@ -79,10 +79,10 @@ func (s *MemberService) DeleteMember(id uint, deleterId uint) error {
 	result := s.DB.Model(&models.Member{}).
 		Where("id = ? AND is_deleted = ?", id, false).
 		Updates(map[string]interface{}{
-			"is_deleted":               true,
-			"deleted_at":               &now,
-			"last_modifier_id":         deleterId,
-			"last_modification_time":   &now,
+			"is_deleted":             true,
+			"deleted_at":             &now,
+			"last_modifier_id":       deleterId,
+			"last_modification_time": &now,
 		})
 
 	if result.Error != nil {

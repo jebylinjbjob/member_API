@@ -12,7 +12,6 @@ import (
 	"member_API/models"
 	"member_API/services"
 	"strconv"
-	"time"
 )
 
 // CreateMember is the resolver for the createMember field.
@@ -276,75 +275,3 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// Helper functions
-func dbToModel(m models.Member) *model.Member {
-	var created, updated *string
-	if !m.CreationTime.IsZero() {
-		s := formatTime(m.CreationTime)
-		created = &s
-	}
-	if m.LastModificationTime != nil && !m.LastModificationTime.IsZero() {
-		s := formatTime(*m.LastModificationTime)
-		updated = &s
-	}
-	return &model.Member{
-		ID:        formatID(m.ID),
-		Name:      m.Name,
-		Email:     m.Email,
-		CreatedAt: created,
-		UpdatedAt: updated,
-	}
-}
-
-func productDBToModel(p models.Product) *model.Product {
-	var created, updated *string
-	if !p.CreationTime.IsZero() {
-		s := formatTime(p.CreationTime)
-		created = &s
-	}
-	if p.LastModificationTime != nil && !p.LastModificationTime.IsZero() {
-		s := formatTime(*p.LastModificationTime)
-		updated = &s
-	}
-	return &model.Product{
-		ID:                 formatID(p.ID),
-		ProductName:        p.ProductName,
-		ProductPrice:       p.ProductPrice,
-		ProductDescription: stringPtr(p.ProductDescription),
-		ProductImage:       stringPtr(p.ProductImage),
-		ProductStock:       p.ProductStock,
-		CreatedAt:          created,
-		UpdatedAt:          updated,
-	}
-}
-
-func formatTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339)
-}
-
-func formatID(id uint) string {
-	return strconv.FormatUint(uint64(id), 10)
-}
-
-func getUserIDFromContext(ctx context.Context) uint {
-	userID, ok := ctx.Value("user_id").(int64)
-	if !ok || userID <= 0 {
-		return 0
-	}
-	return uint(userID)
-}
-
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func ptrToString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
