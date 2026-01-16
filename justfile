@@ -23,6 +23,10 @@ tidy:
     go mod tidy
 
 # 測試覆蓋率
+test-coverage:
+    go test -cover ./...
+
+# 測試覆蓋率產生報告
 test-cov:
     go test -v -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
@@ -44,3 +48,4 @@ auto_check:
     just test
     just build
     just graphql
+    just test-cov
