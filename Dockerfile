@@ -1,7 +1,7 @@
 # Dockerfile for Member API
 # Build with: docker build -t member-api .
 
-FROM golang:1.24 AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
