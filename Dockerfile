@@ -10,13 +10,15 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o member_api ./main.go
 
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 COPY --from=builder /src/member_api ./member_api
 
 EXPOSE 9876
 
-USER 65532:65532
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 
 ENTRYPOINT ["./member_api"]
