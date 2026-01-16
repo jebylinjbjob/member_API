@@ -138,9 +138,7 @@ func TestProductService_GetProducts(t *testing.T) {
 	// Create multiple test products
 	for i := 0; i < 5; i++ {
 		name := fmt.Sprintf("Product %c", 'A'+i)
-		price := 99.99 + float64(i) // Different price for each product due to uniqueIndex
-		stock := 100 + i            // Different stock for each product due to uniqueIndex
-		_, err := service.CreateProduct(name, price, "Description", "test.jpg", stock, 1)
+		_, err := service.CreateProduct(name, 99.99, "Description", "test.jpg", 100, 1)
 		if err != nil {
 			t.Fatalf("Failed to create test product: %v", err)
 		}
