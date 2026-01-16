@@ -14,8 +14,14 @@ func TestAuthMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Set JWT secret for testing
-	os.Setenv("JWT_SECRET", "test_secret_key_for_testing")
-	defer os.Unsetenv("JWT_SECRET")
+	if err := os.Setenv("JWT_SECRET", "test_secret_key_for_testing"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("JWT_SECRET"); err != nil {
+			t.Errorf("Failed to unset JWT_SECRET: %v", err)
+		}
+	}()
 
 	t.Run("Missing Authorization Header", func(t *testing.T) {
 		w := httptest.NewRecorder()

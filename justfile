@@ -39,8 +39,8 @@ clean:
 
 # 一鍵檢查
 auto_check:
-    go mod tidy
-    go fmt ./...
-    go test -v ./...
-    go build
-    just test-cov
+    just tidy
+    just fmt
+    just test
+    just build
+    just graphql
