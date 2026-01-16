@@ -36,3 +36,11 @@ graphql:
 # 清理
 clean:
     rm -rf bin/ coverage.out coverage.html
+
+# 一鍵檢查
+auto_check:
+    go mod tidy
+    go fmt ./...
+    go test -v ./...
+    go build
+    just test-cov
