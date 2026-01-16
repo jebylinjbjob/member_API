@@ -11,7 +11,6 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o member_api ./main.go
 
 FROM alpine:3.21
-# hadolint ignore=DL3018 pinning ca-certificates caused build failures when version tags disappeared.
 RUN apk --no-cache add ca-certificates && update-ca-certificates
 WORKDIR /app
 

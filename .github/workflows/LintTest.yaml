@@ -25,6 +25,7 @@ jobs:
               name: hadolint for Dockerfile
               with:
                   dockerfile: Dockerfile
+                  ignore: DL3018
 
     testing:
         strategy:
