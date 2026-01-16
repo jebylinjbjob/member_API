@@ -14,19 +14,19 @@ func TestCheckPassword(t *testing.T) {
 		{
 			name:     "valid password",
 			password: "password123",
-			hash:     "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy", // bcrypt hash of "password123"
+			hash:     "$2a$10$FULstuepT7uhcOKCWrdlL.NSFcrNXOIP8bfgqWwQLZSamJ5S/daaK", // bcrypt hash of "password123"
 			want:     true,
 		},
 		{
 			name:     "invalid password",
 			password: "wrongpassword",
-			hash:     "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy", // bcrypt hash of "password123"
+			hash:     "$2a$10$FULstuepT7uhcOKCWrdlL.NSFcrNXOIP8bfgqWwQLZSamJ5S/daaK", // bcrypt hash of "password123"
 			want:     false,
 		},
 		{
 			name:     "empty password",
 			password: "",
-			hash:     "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+			hash:     "$2a$10$FULstuepT7uhcOKCWrdlL.NSFcrNXOIP8bfgqWwQLZSamJ5S/daaK",
 			want:     false,
 		},
 		{
