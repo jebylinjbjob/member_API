@@ -51,11 +51,11 @@ func CreateTestMember(t *testing.T, db *gorm.DB, email string) *models.Member {
 			IsDeleted: false,
 		},
 	}
-	
+
 	if err := db.Create(member).Error; err != nil {
 		t.Fatalf("Failed to create test member: %v", err)
 	}
-	
+
 	return member
 }
 
@@ -72,10 +72,10 @@ func CreateTestProduct(t *testing.T, db *gorm.DB, name string) *models.Product {
 			IsDeleted: false,
 		},
 	}
-	
+
 	if err := db.Create(product).Error; err != nil {
 		t.Fatalf("Failed to create test product: %v", err)
 	}
-	
+
 	return product
 }

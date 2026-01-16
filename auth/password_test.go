@@ -95,22 +95,22 @@ func TestCheckPassword(t *testing.T) {
 
 func TestHashPasswordConsistency(t *testing.T) {
 	password := "test-password"
-	
+
 	// 同一個密碼，每次 hash 應該都不同（因為使用隨機 salt）
 	hash1, err := HashPassword(password)
 	if err != nil {
 		t.Fatalf("Failed to hash password: %v", err)
 	}
-	
+
 	hash2, err := HashPassword(password)
 	if err != nil {
 		t.Fatalf("Failed to hash password: %v", err)
 	}
-	
+
 	if hash1 == hash2 {
 		t.Error("HashPassword() should generate different hashes for same password (due to salt)")
 	}
-	
+
 	// 但兩個 hash 都應該能驗證原始密碼
 	if !CheckPassword(password, hash1) {
 		t.Error("CheckPassword() failed to verify first hash")
