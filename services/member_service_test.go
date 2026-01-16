@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"member_API/testutil"
 	"testing"
 )
@@ -131,7 +132,7 @@ func TestMemberService_GetMembers(t *testing.T) {
 
 	// Create multiple test members
 	for i := 0; i < 5; i++ {
-		email := "test" + string(rune('0'+i)) + "@example.com"
+		email := fmt.Sprintf("test%d@example.com", i)
 		_, err := service.CreateMember("Test User", email, "password", 1)
 		if err != nil {
 			t.Fatalf("Failed to create test member: %v", err)

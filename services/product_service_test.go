@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"member_API/testutil"
 	"testing"
 )
@@ -136,7 +137,7 @@ func TestProductService_GetProducts(t *testing.T) {
 
 	// Create multiple test products
 	for i := 0; i < 5; i++ {
-		name := "Product " + string(rune('A'+i))
+		name := fmt.Sprintf("Product %c", 'A'+i)
 		price := 99.99 + float64(i) // Different price for each product due to uniqueIndex
 		stock := 100 + i            // Different stock for each product due to uniqueIndex
 		_, err := service.CreateProduct(name, price, "Description", "test.jpg", stock, 1)
