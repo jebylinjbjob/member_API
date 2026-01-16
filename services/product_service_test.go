@@ -8,7 +8,11 @@ import (
 
 func TestProductService_CreateProduct(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewProductService(db)
 
@@ -82,7 +86,11 @@ func TestProductService_CreateProduct(t *testing.T) {
 
 func TestProductService_GetProductByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewProductService(db)
 
@@ -131,7 +139,11 @@ func TestProductService_GetProductByID(t *testing.T) {
 
 func TestProductService_GetProducts(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewProductService(db)
 
@@ -199,7 +211,11 @@ func TestProductService_GetProducts(t *testing.T) {
 
 func TestProductService_UpdateProduct(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewProductService(db)
 
@@ -289,7 +305,11 @@ func TestProductService_UpdateProduct(t *testing.T) {
 
 func TestProductService_DeleteProduct(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewProductService(db)
 

@@ -10,7 +10,9 @@ import (
 
 func TestGenerateToken(t *testing.T) {
 	// 設定測試用的 JWT secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	if err := os.Setenv("JWT_SECRET", "test-secret-key"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
 	jwtSecret = []byte("test-secret-key")
 
 	tests := []struct {
@@ -49,7 +51,9 @@ func TestGenerateToken(t *testing.T) {
 
 func TestValidateToken(t *testing.T) {
 	// 設定測試用的 JWT secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	if err := os.Setenv("JWT_SECRET", "test-secret-key"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
 	jwtSecret = []byte("test-secret-key")
 
 	userID := int64(1)
@@ -110,7 +114,9 @@ func TestValidateToken(t *testing.T) {
 
 func TestValidateTokenExpired(t *testing.T) {
 	// 設定測試用的 JWT secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	if err := os.Setenv("JWT_SECRET", "test-secret-key"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
 	jwtSecret = []byte("test-secret-key")
 
 	// 建立一個過期的 token
@@ -157,7 +163,9 @@ func TestValidateTokenWrongSecret(t *testing.T) {
 	}
 
 	// 設定正確的 secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	if err := os.Setenv("JWT_SECRET", "test-secret-key"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
 	jwtSecret = []byte("test-secret-key")
 
 	// 嘗試驗證（應該失敗）
@@ -169,7 +177,9 @@ func TestValidateTokenWrongSecret(t *testing.T) {
 
 func TestTokenRoundTrip(t *testing.T) {
 	// 設定測試用的 JWT secret
-	os.Setenv("JWT_SECRET", "test-secret-key")
+	if err := os.Setenv("JWT_SECRET", "test-secret-key"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
 	jwtSecret = []byte("test-secret-key")
 
 	userID := int64(42)

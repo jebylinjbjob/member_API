@@ -8,7 +8,11 @@ import (
 
 func TestMemberService_CreateMember(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewMemberService(db)
 
@@ -77,7 +81,11 @@ func TestMemberService_CreateMember(t *testing.T) {
 
 func TestMemberService_GetMemberByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewMemberService(db)
 
@@ -126,7 +134,11 @@ func TestMemberService_GetMemberByID(t *testing.T) {
 
 func TestMemberService_GetMembers(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewMemberService(db)
 
@@ -177,7 +189,11 @@ func TestMemberService_GetMembers(t *testing.T) {
 
 func TestMemberService_UpdateMember(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewMemberService(db)
 
@@ -244,7 +260,11 @@ func TestMemberService_UpdateMember(t *testing.T) {
 
 func TestMemberService_DeleteMember(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(db)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
 
 	service := NewMemberService(db)
 
