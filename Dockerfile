@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o member_api ./main.go
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates=20241010-r0
 WORKDIR /app
 
