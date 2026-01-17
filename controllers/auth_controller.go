@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"member_API/auth"
 	"member_API/models"
@@ -91,6 +92,7 @@ func Register(input *gin.Context) {
 // @Success 200 {object} AuthResponse "登入成功"
 // @Failure 400 {object} map[string]string "請求參數錯誤"
 // @Failure 401 {object} map[string]string "電子郵件或密碼錯誤"
+// @Failure 403 {object} map[string]string "帳號已被鎖定"
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /login [post]
 func Login(input *gin.Context) {
@@ -120,10 +122,50 @@ func Login(input *gin.Context) {
 		return
 	}
 
+	// 檢查帳號是否被鎖定
+	if member.IsLocked && member.LockedUntil != nil && member.LockedUntil.After(time.Now()) {
+		input.JSON(http.StatusForbidden, gin.H{"error": "帳號已被鎖定，請稍後再試"})
+		return
+	}
+
+	// 如果鎖定時間已過，解鎖帳號
+	if member.IsLocked && member.LockedUntil != nil && member.LockedUntil.Before(time.Now()) {
+		db.Model(&member).Updates(map[string]interface{}{
+			"is_locked":             false,
+			"failed_login_attempts": 0,
+			"locked_until":          nil,
+		})
+		member.IsLocked = false
+		member.FailedLoginAttempts = 0
+		member.LockedUntil = nil
+	}
+
 	// 驗證密碼
 	if !auth.CheckPassword(req.Password, member.PasswordHash) {
+		// 增加失敗登入次數
+		member.FailedLoginAttempts++
+		
+		// 如果失敗次數達到5次，鎖定帳號30分鐘
+		if member.FailedLoginAttempts >= 5 {
+			lockUntil := time.Now().Add(30 * time.Minute)
+			db.Model(&member).Updates(map[string]interface{}{
+				"is_locked":             true,
+				"failed_login_attempts": member.FailedLoginAttempts,
+				"locked_until":          lockUntil,
+			})
+			input.JSON(http.StatusForbidden, gin.H{"error": "登入失敗次數過多，帳號已被鎖定30分鐘"})
+			return
+		}
+		
+		// 更新失敗次數
+		db.Model(&member).Update("failed_login_attempts", member.FailedLoginAttempts)
 		input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
 		return
+	}
+
+	// 登入成功，重置失敗次數
+	if member.FailedLoginAttempts > 0 {
+		db.Model(&member).Update("failed_login_attempts", 0)
 	}
 
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}

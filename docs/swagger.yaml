@@ -175,6 +175,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "403":
+          description: 帳號已被鎖定
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: 服務器錯誤
           schema:

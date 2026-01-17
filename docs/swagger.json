@@ -97,6 +97,15 @@
                             }
                         }
                     },
+                    "403": {
+                        "description": "帳號已被鎖定",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "服務器錯誤",
                         "schema": {

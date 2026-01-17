@@ -116,3 +116,24 @@ func (s *MemberService) GetMembers(limit int) ([]models.Member, error) {
 	}
 	return members, nil
 }
+
+// UnlockMember 解鎖會員帳號
+func (s *MemberService) UnlockMember(id uint) error {
+	result := s.DB.Model(&models.Member{}).
+		Where("id = ? AND is_deleted = ?", id, false).
+		Updates(map[string]interface{}{
+			"is_locked":             false,
+			"failed_login_attempts": 0,
+			"locked_until":          nil,
+		})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("會員不存在或已被刪除")
+	}
+
+	return nil
+}

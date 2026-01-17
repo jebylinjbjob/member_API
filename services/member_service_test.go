@@ -2,8 +2,10 @@ package services
 
 import (
 	"fmt"
+	"member_API/models"
 	"member_API/testutil"
 	"testing"
+	"time"
 )
 
 func TestMemberService_CreateMember(t *testing.T) {
@@ -313,6 +315,73 @@ func TestMemberService_DeleteMember(t *testing.T) {
 				member, err := service.GetMemberByID(tt.id)
 				if err == nil {
 					t.Errorf("DeleteMember() member should not be retrievable after deletion, got member: %+v", member)
+				}
+			}
+		})
+	}
+}
+
+func TestMemberService_UnlockMember(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer func() {
+		if err := testutil.CleanupTestDB(db); err != nil {
+			t.Errorf("Failed to cleanup test database: %v", err)
+		}
+	}()
+
+	service := NewMemberService(db)
+
+	// Create a locked test member
+	created, err := service.CreateMember("Test User", "test@example.com", "password", 1)
+	if err != nil {
+		t.Fatalf("Failed to create test member: %v", err)
+	}
+
+	// Lock the member
+	lockUntil := time.Now().Add(30 * time.Minute)
+	db.Model(&created).Updates(map[string]interface{}{
+		"is_locked":             true,
+		"failed_login_attempts": 5,
+		"locked_until":          lockUntil,
+	})
+
+	tests := []struct {
+		name    string
+		id      uint
+		wantErr bool
+	}{
+		{
+			name:    "Valid unlock",
+			id:      created.ID,
+			wantErr: false,
+		},
+		{
+			name:    "Unlock non-existing member",
+			id:      9999,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := service.UnlockMember(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnlockMember() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Verify the member is unlocked
+			if !tt.wantErr {
+				var member models.Member
+				db.First(&member, tt.id)
+				if member.IsLocked {
+					t.Error("UnlockMember() member should be unlocked")
+				}
+				if member.FailedLoginAttempts != 0 {
+					t.Errorf("UnlockMember() FailedLoginAttempts = %v, want 0", member.FailedLoginAttempts)
+				}
+				if member.LockedUntil != nil {
+					t.Error("UnlockMember() LockedUntil should be nil")
 				}
 			}
 		})
