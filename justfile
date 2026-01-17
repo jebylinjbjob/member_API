@@ -43,7 +43,7 @@ clean:
 
 # 靜態代碼分析
 lint:
-    golangci-lint run
+    $(go env GOPATH)/bin/golangci-lint run
 
 # 一鍵檢查
 auto_check:
