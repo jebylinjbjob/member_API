@@ -8,7 +8,6 @@ import (
 	"member_API/config"
 	"member_API/controllers"
 	_ "member_API/docs"
-	"member_API/graphql"
 	"member_API/models"
 	"member_API/routes"
 
@@ -130,10 +129,6 @@ func main() {
 				_ = sqlDB.Close()
 			}
 		}()
-	}
-
-	if err := graphql.SetupGraphQL(db); err != nil {
-		log.Printf("Warning: GraphQL failed: %v\n", err)
 	}
 
 	router := gin.Default()

@@ -52,17 +52,6 @@ func TestSetupRouter(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			checkBody:      func(t *testing.T, body []byte) {},
 		},
-		{
-			name:           "GraphQL endpoint exists",
-			method:         http.MethodPost,
-			path:           "/graphql",
-			expectedStatus: http.StatusInternalServerError,
-			checkBody: func(t *testing.T, body []byte) {
-				var response map[string]interface{}
-				_ = json.Unmarshal(body, &response)
-				assert.Contains(t, response["error"], "GraphQL handler not initialized")
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -146,29 +135,6 @@ func TestRouteNotFound(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGraphQLEndpointMethods(t *testing.T) {
-	router := setupTestRouter()
-	SetupRouter(router)
-
-	methods := []string{
-		http.MethodGet,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodDelete,
-	}
-
-	for _, method := range methods {
-		t.Run("GraphQL "+method, func(t *testing.T) {
-			req := httptest.NewRequest(method, "/graphql", nil)
-			w := httptest.NewRecorder()
-
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, http.StatusInternalServerError, w.Code)
-		})
-	}
 }
 
 func TestPublicRoutesAccessibility(t *testing.T) {
