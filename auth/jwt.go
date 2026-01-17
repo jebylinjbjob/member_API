@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -49,8 +50,12 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return jwtSecret, nil
 	})
 
-	if err != nil || !token.Valid {
+	if err != nil {
 		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("token is invalid")
 	}
 
 	return claims, nil
