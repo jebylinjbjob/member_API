@@ -104,12 +104,12 @@ func TestGenerateToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			token, err := GenerateToken(tt.userID, tt.email)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				if token == "" {
 					t.Error("GenerateToken() 返回空 token")
@@ -138,7 +138,7 @@ func TestGenerateTokenExpiration(t *testing.T) {
 	// 驗證過期時間應該是 24 小時後
 	expectedExpiry := time.Now().Add(24 * time.Hour)
 	actualExpiry := claims.ExpiresAt.Time
-	
+
 	// 允許 5 秒的誤差
 	diff := actualExpiry.Sub(expectedExpiry)
 	if diff < -5*time.Second || diff > 5*time.Second {
@@ -219,7 +219,7 @@ func TestValidateToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			claims, err := ValidateToken(tt.token)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -295,7 +295,7 @@ func TestValidateTokenExpired(t *testing.T) {
 			}
 
 			_, err = ValidateToken(tokenString)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -393,12 +393,12 @@ func TestValidateTokenValid(t *testing.T) {
 
 	t.Run("測試 token.Valid 檢查邏輯", func(t *testing.T) {
 		// 這個測試專門驗證 jwt.go 中的 if !token.Valid 條件分支
-		
+
 		// Case 1: 使用錯誤 secret - 應觸發 token.Valid = false
 		claims := createTestClaims(1, "test@example.com", time.Now().Add(24*time.Hour), time.Now())
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		wrongSecretToken, _ := token.SignedString([]byte("wrong-secret"))
-		
+
 		result, err := ValidateToken(wrongSecretToken)
 		if err == nil {
 			t.Error("使用錯誤 secret 的 token 應該返回錯誤")
@@ -406,12 +406,12 @@ func TestValidateTokenValid(t *testing.T) {
 		if result != nil {
 			t.Error("驗證失敗時應返回 nil claims")
 		}
-		
+
 		// Case 2: 過期的 token - 應觸發 err != nil 且 token.Valid = false
 		expiredClaims := createTestClaims(2, "expired@example.com", time.Now().Add(-1*time.Hour), time.Now().Add(-2*time.Hour))
 		expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, expiredClaims)
 		expiredTokenString, _ := expiredToken.SignedString(jwtSecret)
-		
+
 		result, err = ValidateToken(expiredTokenString)
 		if err == nil {
 			t.Error("過期的 token 應該返回錯誤")
@@ -503,7 +503,7 @@ func TestJWTSecretInitialization(t *testing.T) {
 			t.Error("jwtSecret 不應為空")
 		}
 	})
-	
+
 	t.Run("使用環境變量設置的 secret", func(t *testing.T) {
 		setupTest(t)
 		expected := []byte("test-secret-key")
