@@ -51,19 +51,3 @@ func getUserIDFromContext(ctx context.Context) uuid.UUID {
 	}
 	return userID
 }
-
-// stringPtr converts string to *string pointer
-func stringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-// ptrToString converts *string pointer to string
-func ptrToString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
