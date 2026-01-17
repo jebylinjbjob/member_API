@@ -182,6 +182,9 @@ func Login(input *gin.Context) {
 		db.Model(&member).Update("failed_login_attempts", 0)
 	}
 
+	// 重置速率限制器（登入成功）
+	auth.GetLoginRateLimiter().Reset(input.ClientIP())
+
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 
 	// 生成 token

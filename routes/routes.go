@@ -21,7 +21,8 @@ func SetupRouter(Router *gin.Engine) {
 	{
 		// Authentication-related routes
 		public.POST("/register", controllers.Register)
-		public.POST("/login", controllers.Login)
+		// 登入端點使用速率限制中間件來防止暴力破解
+		public.POST("/login", auth.LoginRateLimitMiddleware(), controllers.Login)
 	}
 
 	// GraphQL endpoint
