@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"time"
 
+	"member_API/config"
 	"member_API/controllers"
-	_ "member_API/docs" // 導入 swagger 文檔
+	_ "member_API/docs"
 	"member_API/graphql"
 	"member_API/models"
 	"member_API/routes"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv" // 新增
+	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
@@ -44,17 +44,16 @@ import (
 
 var db *gorm.DB
 
-func initPostgreSQL() error {
+func initPostgreSQL(cfg *config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	dsn := os.Getenv("POSTGRES_DSN")
-	if dsn == "" {
-		log.Println("Warning: POSTGRES_DSN environment variable not set. Using default DSN for local development.")
+	if cfg.Database.DSN == "" {
+		log.Println("Warning: POSTGRES_DSN not set")
 		return nil
 	}
 
-	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	gormDB, err := gorm.Open(postgres.Open(cfg.Database.DSN), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
@@ -66,9 +65,9 @@ func initPostgreSQL() error {
 		return err
 	}
 
-	sqlDB.SetConnMaxLifetime(time.Hour)
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
 
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return err
@@ -87,7 +86,7 @@ func initPostgreSQL() error {
 	db = gormDB
 	controllers.SetupUserController(db)
 
-	log.Println("Connected to PostgreSQL!")
+	log.Println("Connected to PostgreSQL")
 	return nil
 }
 
@@ -116,52 +115,34 @@ func HealthCheck(c *gin.Context) {
 }
 
 func main() {
-
-	// 載入 .env 文件
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found, using environment variables")
+		log.Println("Warning: .env file not found")
 	}
 
-	// 初始化 PostgreSQL 連接
-	if err := initPostgreSQL(); err != nil {
-		log.Printf("Warning: PostgreSQL connection failed: %v\n", err)
-		log.Println("Starting server without PostgreSQL connection...")
+	cfg := config.Load()
 
+	if err := initPostgreSQL(cfg); err != nil {
+		log.Printf("Warning: PostgreSQL failed: %v\n", err)
+		log.Println("Starting without database...")
 	} else {
 		defer func() {
 			if sqlDB, err := db.DB(); err == nil {
-				if err := sqlDB.Close(); err != nil {
-					log.Printf("Error closing PostgreSQL connection: %v\n", err)
-				}
-
-			} else {
-				log.Printf("Error retrieving SQL DB handle: %v\n", err)
+				sqlDB.Close()
 			}
 		}()
 	}
 
-	// 初始化 GraphQL（必須在路由設置之前）
 	if err := graphql.SetupGraphQL(db); err != nil {
-		log.Printf("Warning: GraphQL setup failed: %v\n", err)
-	} else {
-		log.Println("[Main] GraphQL setup completed successfully")
+		log.Printf("Warning: GraphQL failed: %v\n", err)
 	}
 
-	// 創建 Gin 路由器
-	Router := gin.Default()
+	router := gin.Default()
+	routes.SetupRouter(router)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/health", HealthCheck)
 
-	// 設置路由（需要在 GraphQL 初始化之後）
-	routes.SetupRouter(Router)
-
-	// Swagger 文檔路由
-	Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// 添加一個簡單的健康檢查端點
-	Router.GET("/health", HealthCheck)
-
-	// 啟動服務器
-	log.Println("Server starting on :9876...")
-	if err := Router.Run(":9876"); err != nil {
+	log.Println("Server starting on :" + cfg.Server.Port)
+	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatal(err)
 	}
 }
