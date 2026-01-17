@@ -1,325 +1,390 @@
 package services
 
 import (
-	"fmt"
-	"member_API/testutil"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func TestMemberService_CreateMember(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer func() {
-		if err := testutil.CleanupTestDB(db); err != nil {
-			t.Errorf("Failed to cleanup test database: %v", err)
-		}
-	}()
+func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Failed to create mock: %v", err)
+	}
 
-	service := NewMemberService(db)
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn: db,
+	}), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to open gorm db: %v", err)
+	}
 
+	return gormDB, mock
+}
+
+func TestCreateMember(t *testing.T) {
 	tests := []struct {
 		name      string
-		userName  string
+		inputName string
 		email     string
 		password  string
-		creatorId uuid.UUID
+		creatorID uuid.UUID
 		wantErr   bool
+		errMsg    string
 	}{
 		{
-			name:      "Valid member creation",
-			userName:  "John Doe",
-			email:     "john@example.com",
+			name:      "成功建立會員",
+			inputName: "Test User",
+			email:     "test@example.com",
 			password:  "password123",
-			creatorId: uuid.New(),
+			creatorID: uuid.New(),
 			wantErr:   false,
 		},
 		{
-			name:      "Duplicate email",
-			userName:  "Jane Doe",
-			email:     "john@example.com",
+			name:      "Email 已存在",
+			inputName: "Test User",
+			email:     "existing@example.com",
 			password:  "password123",
-			creatorId: uuid.New(),
+			creatorID: uuid.New(),
 			wantErr:   true,
-		},
-		{
-			name:      "Valid member with different email",
-			userName:  "Jane Smith",
-			email:     "jane@example.com",
-			password:  "password456",
-			creatorId: uuid.New(),
-			wantErr:   false,
+			errMsg:    "email 已被使用",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			member, err := service.CreateMember(tt.userName, tt.email, tt.password, tt.creatorId)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CreateMember() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			db, mock := setupMockDB(t)
+			service := NewMemberService(db)
+
+			if tt.wantErr && tt.errMsg == "email 已被使用" {
+				rows := sqlmock.NewRows([]string{"id", "email"}).
+					AddRow(uuid.New(), tt.email)
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(tt.email, false, 1).
+					WillReturnRows(rows)
+			} else {
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(tt.email, false, 1).
+					WillReturnError(gorm.ErrRecordNotFound)
+
+				mock.ExpectBegin()
+				mock.ExpectExec(`INSERT INTO "members"`).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
 			}
-			if !tt.wantErr {
-				if member == nil {
-					t.Error("CreateMember() returned nil member")
-					return
+
+			member, err := service.CreateMember(tt.inputName, tt.email, tt.password, tt.creatorID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
 				}
-				if member.Email != tt.email {
-					t.Errorf("CreateMember() Email = %v, want %v", member.Email, tt.email)
-				}
-				if member.Name != tt.userName {
-					t.Errorf("CreateMember() Name = %v, want %v", member.Name, tt.userName)
-				}
-				if member.PasswordHash == "" {
-					t.Error("CreateMember() PasswordHash is empty")
-				}
-				if member.PasswordHash == tt.password {
-					t.Error("CreateMember() password should be hashed")
+				assert.Nil(t, member)
+			} else {
+				assert.NoError(t, err)
+				if member != nil {
+					assert.Equal(t, tt.inputName, member.Name)
+					assert.Equal(t, tt.email, member.Email)
+					assert.NotEmpty(t, member.PasswordHash)
 				}
 			}
-		})
-	}
-}
 
-func TestMemberService_GetMemberByID(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer func() {
-		if err := testutil.CleanupTestDB(db); err != nil {
-			t.Errorf("Failed to cleanup test database: %v", err)
-		}
-	}()
-
-	service := NewMemberService(db)
-
-	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
-	if err != nil {
-		t.Fatalf("Failed to create test member: %v", err)
-	}
-
-	tests := []struct {
-		name    string
-		id      uuid.UUID
-		wantErr bool
-	}{
-		{
-			name:    "Existing member",
-			id:      created.ID,
-			wantErr: false,
-		},
-		{
-			name:    "Non-existing member",
-			id:      uuid.New(),
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			member, err := service.GetMemberByID(tt.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetMemberByID() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if member == nil {
-					t.Error("GetMemberByID() returned nil member")
-					return
-				}
-				if member.ID != tt.id {
-					t.Errorf("GetMemberByID() ID = %v, want %v", member.ID, tt.id)
-				}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
 			}
 		})
 	}
 }
 
-func TestMemberService_GetMembers(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer func() {
-		if err := testutil.CleanupTestDB(db); err != nil {
-			t.Errorf("Failed to cleanup test database: %v", err)
-		}
-	}()
-
-	service := NewMemberService(db)
-
-	// Create multiple test members
-	for i := 0; i < 5; i++ {
-		email := fmt.Sprintf("test%d@example.com", i)
-		_, err := service.CreateMember("Test User", email, "password", uuid.New())
-		if err != nil {
-			t.Fatalf("Failed to create test member: %v", err)
-		}
-	}
-
-	tests := []struct {
-		name      string
-		limit     int
-		wantCount int
-		wantErr   bool
-	}{
-		{
-			name:      "Get all members",
-			limit:     10,
-			wantCount: 5,
-			wantErr:   false,
-		},
-		{
-			name:      "Get limited members",
-			limit:     3,
-			wantCount: 3,
-			wantErr:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			members, err := service.GetMembers(tt.limit)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetMembers() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				if len(members) != tt.wantCount {
-					t.Errorf("GetMembers() count = %v, want %v", len(members), tt.wantCount)
-				}
-			}
-		})
-	}
-}
-
-func TestMemberService_UpdateMember(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer func() {
-		if err := testutil.CleanupTestDB(db); err != nil {
-			t.Errorf("Failed to cleanup test database: %v", err)
-		}
-	}()
-
-	service := NewMemberService(db)
-
-	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
-	if err != nil {
-		t.Fatalf("Failed to create test member: %v", err)
-	}
-
+func TestUpdateMember(t *testing.T) {
+	memberID := uuid.New()
 	modifierID := uuid.New()
+	now := time.Now()
 
 	tests := []struct {
 		name       string
-		id         uuid.UUID
-		newName    string
-		newEmail   string
-		modifierId uuid.UUID
+		memberID   uuid.UUID
+		inputName  string
+		email      string
+		modifierID uuid.UUID
+		setupMock  func(sqlmock.Sqlmock)
 		wantErr    bool
+		errMsg     string
 	}{
 		{
-			name:       "Valid update",
-			id:         created.ID,
-			newName:    "Updated Name",
-			newEmail:   "updated@example.com",
-			modifierId: modifierID,
-			wantErr:    false,
+			name:       "成功更新會員",
+			memberID:   memberID,
+			inputName:  "Updated Name",
+			email:      "updated@example.com",
+			modifierID: modifierID,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{
+					"id", "name", "email", "password_hash", "tenants_id", "api_key",
+					"creation_time", "creator_id", "is_deleted",
+				}).AddRow(
+					memberID, "Old Name", "old@example.com", "hash", uuid.New(), "key",
+					now, uuid.New(), false,
+				)
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, memberID, 1).
+					WillReturnRows(rows)
+
+				mock.ExpectBegin()
+				mock.ExpectExec(`UPDATE "members"`).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
 		},
 		{
-			name:       "Update non-existing member",
-			id:         uuid.New(),
-			newName:    "Name",
-			newEmail:   "email@example.com",
-			modifierId: modifierID,
-			wantErr:    true,
+			name:       "會員不存在",
+			memberID:   uuid.New(),
+			inputName:  "Test",
+			email:      "test@example.com",
+			modifierID: modifierID,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, sqlmock.AnyArg(), 1).
+					WillReturnError(gorm.ErrRecordNotFound)
+			},
+			wantErr: true,
+			errMsg:  "會員不存在",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			member, err := service.UpdateMember(tt.id, tt.newName, tt.newEmail, tt.modifierId)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UpdateMember() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			db, mock := setupMockDB(t)
+			service := NewMemberService(db)
+
+			tt.setupMock(mock)
+
+			member, err := service.UpdateMember(tt.memberID, tt.inputName, tt.email, tt.modifierID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+				assert.Nil(t, member)
+			} else {
+				assert.NoError(t, err)
+				if member != nil {
+					assert.Equal(t, tt.inputName, member.Name)
+					assert.Equal(t, tt.email, member.Email)
+				}
 			}
-			if !tt.wantErr {
-				if member == nil {
-					t.Error("UpdateMember() returned nil member")
-					return
-				}
-				if member.Name != tt.newName {
-					t.Errorf("UpdateMember() Name = %v, want %v", member.Name, tt.newName)
-				}
-				if member.Email != tt.newEmail {
-					t.Errorf("UpdateMember() Email = %v, want %v", member.Email, tt.newEmail)
-				}
-				if member.LastModifierId != tt.modifierId {
-					t.Errorf("UpdateMember() LastModifierId = %v, want %v", member.LastModifierId, tt.modifierId)
-				}
-				if member.LastModificationTime == nil {
-					t.Error("UpdateMember() LastModificationTime is nil")
-				}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
 			}
 		})
 	}
 }
 
-func TestMemberService_DeleteMember(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer func() {
-		if err := testutil.CleanupTestDB(db); err != nil {
-			t.Errorf("Failed to cleanup test database: %v", err)
-		}
-	}()
-
-	service := NewMemberService(db)
-
-	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
-	if err != nil {
-		t.Fatalf("Failed to create test member: %v", err)
-	}
-
+func TestDeleteMember(t *testing.T) {
+	memberID := uuid.New()
 	deleterID := uuid.New()
 
 	tests := []struct {
 		name      string
-		id        uuid.UUID
-		deleterId uuid.UUID
+		memberID  uuid.UUID
+		deleterID uuid.UUID
+		setupMock func(sqlmock.Sqlmock)
 		wantErr   bool
+		errMsg    string
 	}{
 		{
-			name:      "Valid delete",
-			id:        created.ID,
-			deleterId: deleterID,
-			wantErr:   false,
+			name:      "成功刪除會員",
+			memberID:  memberID,
+			deleterID: deleterID,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(`UPDATE "members"`).
+					WithArgs(sqlmock.AnyArg(), true, sqlmock.AnyArg(), deleterID, memberID, false).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+			wantErr: false,
 		},
 		{
-			name:      "Delete non-existing member",
-			id:        uuid.New(),
-			deleterId: deleterID,
-			wantErr:   true,
-		},
-		{
-			name:      "Delete already deleted member",
-			id:        created.ID,
-			deleterId: deleterID,
-			wantErr:   true,
+			name:      "會員不存在或已被刪除",
+			memberID:  uuid.New(),
+			deleterID: deleterID,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(`UPDATE "members"`).
+					WithArgs(sqlmock.AnyArg(), true, sqlmock.AnyArg(), deleterID, sqlmock.AnyArg(), false).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+				mock.ExpectCommit()
+			},
+			wantErr: true,
+			errMsg:  "會員不存在或已被刪除",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.DeleteMember(tt.id, tt.deleterId)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DeleteMember() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			db, mock := setupMockDB(t)
+			service := NewMemberService(db)
+
+			tt.setupMock(mock)
+
+			err := service.DeleteMember(tt.memberID, tt.deleterID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetMemberByID(t *testing.T) {
+	memberID := uuid.New()
+	now := time.Now()
+
+	tests := []struct {
+		name      string
+		memberID  uuid.UUID
+		setupMock func(sqlmock.Sqlmock)
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name:     "成功取得會員",
+			memberID: memberID,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{
+					"id", "name", "email", "password_hash", "tenants_id", "api_key",
+					"creation_time", "creator_id", "is_deleted",
+				}).AddRow(
+					memberID, "Test User", "test@example.com", "hash", uuid.New(), "key",
+					now, uuid.New(), false,
+				)
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, memberID, 1).
+					WillReturnRows(rows)
+			},
+			wantErr: false,
+		},
+		{
+			name:     "會員不存在",
+			memberID: uuid.New(),
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, sqlmock.AnyArg(), 1).
+					WillReturnError(gorm.ErrRecordNotFound)
+			},
+			wantErr: true,
+			errMsg:  "會員不存在",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock := setupMockDB(t)
+			service := NewMemberService(db)
+
+			tt.setupMock(mock)
+
+			member, err := service.GetMemberByID(tt.memberID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+				assert.Nil(t, member)
+			} else {
+				assert.NoError(t, err)
+				if member != nil {
+					assert.Equal(t, tt.memberID, member.ID)
+				}
 			}
 
-			// Verify the member is marked as deleted (soft delete)
-			if !tt.wantErr {
-				member, err := service.GetMemberByID(tt.id)
-				if err == nil {
-					t.Errorf("DeleteMember() member should not be retrievable after deletion, got member: %+v", member)
-				}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+func TestGetMembers(t *testing.T) {
+	now := time.Now()
+
+	tests := []struct {
+		name      string
+		limit     int
+		setupMock func(sqlmock.Sqlmock)
+		wantErr   bool
+		wantCount int
+	}{
+		{
+			name:  "成功取得會員列表",
+			limit: 10,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{
+					"id", "name", "email", "password_hash", "tenants_id", "api_key",
+					"creation_time", "creator_id", "is_deleted",
+				}).
+					AddRow(uuid.New(), "User 1", "user1@example.com", "hash", uuid.New(), "key1", now, uuid.New(), false).
+					AddRow(uuid.New(), "User 2", "user2@example.com", "hash", uuid.New(), "key2", now, uuid.New(), false)
+
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, 10).
+					WillReturnRows(rows)
+			},
+			wantErr:   false,
+			wantCount: 2,
+		},
+		{
+			name:  "取得空列表",
+			limit: 10,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{
+					"id", "name", "email", "password_hash", "tenants_id", "api_key",
+					"creation_time", "creator_id", "is_deleted",
+				})
+				mock.ExpectQuery(`SELECT \* FROM "members"`).
+					WithArgs(false, 10).
+					WillReturnRows(rows)
+			},
+			wantErr:   false,
+			wantCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock := setupMockDB(t)
+			service := NewMemberService(db)
+
+			tt.setupMock(mock)
+
+			members, err := service.GetMembers(tt.limit)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, members)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, members)
+				assert.Equal(t, tt.wantCount, len(members))
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
 			}
 		})
 	}

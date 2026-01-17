@@ -110,7 +110,7 @@ func Login(input *gin.Context) {
 	// 查詢用戶
 	var member models.Member
 	err := db.WithContext(input.Request.Context()).
-		Where("email = ? AND tenants_id = ?", req.Email , req.Tenants.ID).
+		Where("email = ? AND tenants_id = ?", req.Email, req.Tenants.ID).
 		First(&member).Error
 
 	if err != nil {
