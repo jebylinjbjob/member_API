@@ -8,7 +8,7 @@ run:
 
 # 編譯
 build:
-    go build -o bin/member_api main.go
+    go build
 
 # 測試
 test:
