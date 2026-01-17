@@ -41,11 +41,15 @@ graphql:
 clean:
     rm -rf bin/ coverage.out coverage.html
 
+# 靜態代碼分析
+lint:
+    golangci-lint run
+
 # 一鍵檢查
 auto_check:
     just tidy
     just fmt
-    just test
+    just lint
     just build
-    just graphql
+    just test
     just test-cov

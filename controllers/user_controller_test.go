@@ -196,7 +196,7 @@ func TestGetUserByID(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			tt.checkResponse(t, response)
 		})
 	}
@@ -292,7 +292,7 @@ func TestDeleteUserByID(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			tt.checkResponse(t, response)
 		})
 	}

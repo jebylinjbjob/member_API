@@ -34,7 +34,7 @@ func TestSetupRouter(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			checkBody: func(t *testing.T, body []byte) {
 				var response map[string]interface{}
-				json.Unmarshal(body, &response)
+				_ = json.Unmarshal(body, &response)
 				assert.Equal(t, "Hello, RESTful API!", response["message"])
 			},
 		},
@@ -59,7 +59,7 @@ func TestSetupRouter(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			checkBody: func(t *testing.T, body []byte) {
 				var response map[string]interface{}
-				json.Unmarshal(body, &response)
+				_ = json.Unmarshal(body, &response)
 				assert.Contains(t, response["error"], "GraphQL handler not initialized")
 			},
 		},
@@ -102,7 +102,7 @@ func TestProtectedRoutes(t *testing.T) {
 			assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			assert.Contains(t, response["error"], "Authorization header")
 		})
 	}
