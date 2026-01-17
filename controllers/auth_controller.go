@@ -13,6 +13,13 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// MaxFailedLoginAttempts 最大失敗登入次數
+	MaxFailedLoginAttempts = 5
+	// AccountLockDuration 帳號鎖定時長
+	AccountLockDuration = 30 * time.Minute
+)
+
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=6" example:"password123"`
@@ -142,23 +149,30 @@ func Login(input *gin.Context) {
 
 	// 驗證密碼
 	if !auth.CheckPassword(req.Password, member.PasswordHash) {
-		// 增加失敗登入次數
-		member.FailedLoginAttempts++
+		// 使用數據庫級別的原子操作增加失敗登入次數
+		result := db.Model(&models.Member{}).
+			Where("id = ?", member.ID).
+			UpdateColumn("failed_login_attempts", gorm.Expr("failed_login_attempts + ?", 1))
 		
-		// 如果失敗次數達到5次，鎖定帳號30分鐘
-		if member.FailedLoginAttempts >= 5 {
-			lockUntil := time.Now().Add(30 * time.Minute)
+		if result.Error != nil {
+			input.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+			return
+		}
+		
+		// 重新查詢以獲取更新後的失敗次數
+		db.First(&member, member.ID)
+		
+		// 如果失敗次數達到閾值，鎖定帳號
+		if member.FailedLoginAttempts >= MaxFailedLoginAttempts {
+			lockUntil := time.Now().Add(AccountLockDuration)
 			db.Model(&member).Updates(map[string]interface{}{
-				"is_locked":             true,
-				"failed_login_attempts": member.FailedLoginAttempts,
-				"locked_until":          lockUntil,
+				"is_locked":    true,
+				"locked_until": lockUntil,
 			})
 			input.JSON(http.StatusForbidden, gin.H{"error": "登入失敗次數過多，帳號已被鎖定30分鐘"})
 			return
 		}
 		
-		// 更新失敗次數
-		db.Model(&member).Update("failed_login_attempts", member.FailedLoginAttempts)
 		input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
 		return
 	}
