@@ -18,10 +18,10 @@ func TestLoad(t *testing.T) {
 		{
 			name: "使用預設值",
 			setup: func() {
-				os.Unsetenv("POSTGRES_DSN")
-				os.Unsetenv("DB_MAX_OPEN_CONNS")
-				os.Unsetenv("DB_MAX_IDLE_CONNS")
-				os.Unsetenv("PORT")
+				_ = os.Unsetenv("POSTGRES_DSN")
+				_ = os.Unsetenv("DB_MAX_OPEN_CONNS")
+				_ = os.Unsetenv("DB_MAX_IDLE_CONNS")
+				_ = os.Unsetenv("PORT")
 			},
 			cleanup: func() {},
 			validate: func(t *testing.T, cfg *Config) {
@@ -35,16 +35,16 @@ func TestLoad(t *testing.T) {
 		{
 			name: "使用環境變數",
 			setup: func() {
-				os.Setenv("POSTGRES_DSN", "postgres://test:test@localhost/testdb")
-				os.Setenv("DB_MAX_OPEN_CONNS", "50")
-				os.Setenv("DB_MAX_IDLE_CONNS", "10")
-				os.Setenv("PORT", "8080")
+				_ = os.Setenv("POSTGRES_DSN", "postgres://test:test@localhost/testdb")
+				_ = os.Setenv("DB_MAX_OPEN_CONNS", "50")
+				_ = os.Setenv("DB_MAX_IDLE_CONNS", "10")
+				_ = os.Setenv("PORT", "8080")
 			},
 			cleanup: func() {
-				os.Unsetenv("POSTGRES_DSN")
-				os.Unsetenv("DB_MAX_OPEN_CONNS")
-				os.Unsetenv("DB_MAX_IDLE_CONNS")
-				os.Unsetenv("PORT")
+				_ = os.Unsetenv("POSTGRES_DSN")
+				_ = os.Unsetenv("DB_MAX_OPEN_CONNS")
+				_ = os.Unsetenv("DB_MAX_IDLE_CONNS")
+				_ = os.Unsetenv("PORT")
 			},
 			validate: func(t *testing.T, cfg *Config) {
 				assert.Equal(t, "postgres://test:test@localhost/testdb", cfg.Database.DSN)
@@ -57,14 +57,14 @@ func TestLoad(t *testing.T) {
 		{
 			name: "環境變數部分設置",
 			setup: func() {
-				os.Setenv("POSTGRES_DSN", "postgres://localhost/db")
-				os.Setenv("PORT", "3000")
-				os.Unsetenv("DB_MAX_OPEN_CONNS")
-				os.Unsetenv("DB_MAX_IDLE_CONNS")
+				_ = os.Setenv("POSTGRES_DSN", "postgres://localhost/db")
+				_ = os.Setenv("PORT", "3000")
+				_ = os.Unsetenv("DB_MAX_OPEN_CONNS")
+				_ = os.Unsetenv("DB_MAX_IDLE_CONNS")
 			},
 			cleanup: func() {
-				os.Unsetenv("POSTGRES_DSN")
-				os.Unsetenv("PORT")
+				_ = os.Unsetenv("POSTGRES_DSN")
+				_ = os.Unsetenv("PORT")
 			},
 			validate: func(t *testing.T, cfg *Config) {
 				assert.Equal(t, "postgres://localhost/db", cfg.Database.DSN)
@@ -133,8 +133,8 @@ func TestGetEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setEnv {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue)
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			}
 
 			result := getEnv(tt.key, tt.defaultValue)
@@ -205,8 +205,8 @@ func TestGetEnvInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setEnv {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue)
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			}
 
 			result := getEnvInt(tt.key, tt.defaultValue)

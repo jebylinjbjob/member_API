@@ -103,7 +103,7 @@ func TestGetUsersWithoutDB(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response, "users")
 	assert.Contains(t, response, "message")
 	assert.Equal(t, "database connection not configured", response["message"])
@@ -216,7 +216,7 @@ func TestGetUserByIDWithoutDB(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response, "user")
 	assert.Contains(t, response, "message")
 	assert.Equal(t, "database connection not configured", response["message"])
@@ -312,7 +312,7 @@ func TestDeleteUserByIDWithoutDB(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "database connection not configured", response["error"])
 }

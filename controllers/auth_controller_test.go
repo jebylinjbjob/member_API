@@ -128,7 +128,7 @@ func TestRegister(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			tt.checkResponse(t, response)
 		})
 	}
@@ -251,7 +251,7 @@ func TestLogin(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			tt.checkResponse(t, response)
 		})
 	}
@@ -341,7 +341,7 @@ func TestGetProfile(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			var response map[string]interface{}
-			json.Unmarshal(w.Body.Bytes(), &response)
+			_ = json.Unmarshal(w.Body.Bytes(), &response)
 			tt.checkResponse(t, response)
 		})
 	}
@@ -367,7 +367,7 @@ func TestRegisterWithoutDB(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response["error"], "數據庫連接未配置")
 }
 
@@ -390,7 +390,7 @@ func TestLoginWithoutDB(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response["error"], "數據庫連接未配置")
 }
 
@@ -413,7 +413,7 @@ func TestGetProfileWithInvalidUserID(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Contains(t, response["error"], "未認證")
 }
 
@@ -446,7 +446,7 @@ func TestRegisterTokenGenerationError(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	if w.Code == http.StatusInternalServerError {
 		assert.Contains(t, response, "error")

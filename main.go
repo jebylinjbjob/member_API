@@ -127,7 +127,7 @@ func main() {
 	} else {
 		defer func() {
 			if sqlDB, err := db.DB(); err == nil {
-				sqlDB.Close()
+				_ = sqlDB.Close()
 			}
 		}()
 	}
