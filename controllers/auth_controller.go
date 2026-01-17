@@ -9,10 +9,12 @@ import (
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type LoginRequest struct {
+	Tenants  models.Tenants
 	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=6" example:"password123"`
 }
@@ -28,6 +30,49 @@ type AuthResponse struct {
 	User  User   `json:"user"`
 }
 
+func respondError(c *gin.Context, status int, message string) {
+	c.JSON(status, gin.H{"error": message})
+}
+
+func checkDB(c *gin.Context) bool {
+	if db == nil {
+		respondError(c, http.StatusInternalServerError, "數據庫連接未配置")
+		return false
+	}
+	return true
+}
+
+func getUserFromContext(c *gin.Context) (int64, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return 0, false
+	}
+
+	idValue, ok := userID.(int64)
+	if !ok {
+		return 0, false
+	}
+
+	return idValue, true
+}
+
+func memberToUser(m *models.Member) User {
+	return User{
+		ID:    int64(m.ID.ID()),
+		Name:  m.Name,
+		Email: m.Email,
+	}
+}
+
+func generateAuthResponse(member *models.Member) (*AuthResponse, error) {
+	user := memberToUser(member)
+	token, err := auth.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &AuthResponse{Token: token, User: user}, nil
+}
+
 // Register 用戶註冊
 // @Summary 用戶註冊
 // @Description 註冊新用戶，返回 JWT token 和用戶信息
@@ -40,45 +85,35 @@ type AuthResponse struct {
 // @Failure 409 {object} map[string]string "該電子郵件已被註冊"
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /register [post]
-func Register(input *gin.Context) {
-	if db == nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+func Register(c *gin.Context) {
+	if !checkDB(c) {
 		return
 	}
 
 	var req RegisterRequest
-	if err := input.ShouldBindJSON(&req); err != nil {
-		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// 使用 Service 層建立會員（自動處理密碼加密、審計欄位等）
 	svc := services.NewMemberService(db)
-
-	// 註冊時使用 creatorId = 0 表示自行註冊
-	member, err := svc.CreateMember(req.Name, req.Email, req.Password, 0)
+	member, err := svc.CreateMember(req.Name, req.Email, req.Password, uuid.Nil)
 	if err != nil {
 		if err.Error() == "email 已被使用" {
-			input.JSON(http.StatusConflict, gin.H{"error": "該電子郵件已被註冊"})
+			respondError(c, http.StatusConflict, "該電子郵件已被註冊")
 			return
 		}
-		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
-
-	// 生成 token
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	response, err := generateAuthResponse(member)
 	if err != nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		respondError(c, http.StatusInternalServerError, "Token 生成失敗")
 		return
 	}
 
-	input.JSON(http.StatusCreated, AuthResponse{
-		Token: token,
-		User:  user,
-	})
+	c.JSON(http.StatusCreated, response)
 }
 
 // Login 用戶登入
@@ -93,52 +128,43 @@ func Register(input *gin.Context) {
 // @Failure 401 {object} map[string]string "電子郵件或密碼錯誤"
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /login [post]
-func Login(input *gin.Context) {
-	if db == nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+func Login(c *gin.Context) {
+	if !checkDB(c) {
 		return
 	}
 
 	var req LoginRequest
-	if err := input.ShouldBindJSON(&req); err != nil {
-		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// 查詢用戶
 	var member models.Member
-	err := db.WithContext(input.Request.Context()).
-		Where("email = ?", req.Email).
+	err := db.WithContext(c.Request.Context()).
+		Where("email = ? AND tenants_id = ?", req.Email, req.Tenants.ID).
 		First(&member).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+			respondError(c, http.StatusUnauthorized, "電子郵件或密碼錯誤")
 			return
 		}
-		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// 驗證密碼
 	if !auth.CheckPassword(req.Password, member.PasswordHash) {
-		input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+		respondError(c, http.StatusUnauthorized, "電子郵件或密碼錯誤")
 		return
 	}
 
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
-
-	// 生成 token
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	response, err := generateAuthResponse(&member)
 	if err != nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		respondError(c, http.StatusInternalServerError, "Token 生成失敗")
 		return
 	}
 
-	input.JSON(http.StatusOK, AuthResponse{
-		Token: token,
-		User:  user,
-	})
+	c.JSON(http.StatusOK, response)
 }
 
 // GetProfile 獲取當前用戶信息（需要認證）
@@ -154,20 +180,13 @@ func Login(input *gin.Context) {
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /profile [get]
 func GetProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未認證"})
-		return
-	}
-
-	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
-		return
-	}
-
-	idValue, ok := userID.(int64)
+	idValue, ok := getUserFromContext(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未認證"})
+		respondError(c, http.StatusUnauthorized, "未認證")
+		return
+	}
+
+	if !checkDB(c) {
 		return
 	}
 
@@ -176,12 +195,12 @@ func GetProfile(c *gin.Context) {
 		Select("id", "name", "email").
 		First(&member, idValue).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用戶不存在"})
+			respondError(c, http.StatusNotFound, "用戶不存在")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	c.JSON(http.StatusOK, gin.H{"user": memberToUser(&member)})
 }
