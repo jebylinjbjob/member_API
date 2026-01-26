@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"member_API/config"
 	"member_API/controllers"
 	_ "member_API/docs" // 導入 swagger 文檔
 	"member_API/graphql"
@@ -157,9 +158,15 @@ func main() {
 	// 添加一個簡單的健康檢查端點
 	Router.GET("/health", HealthCheck)
 
-	// 啟動服務器
-	log.Println("Server starting on :9876...")
-	if err := Router.Run(":9876"); err != nil {
+	// // 啟動服務器
+	cfg := config.Load()
+	router := gin.Default()
+	routes.SetupRouter(router)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/health", HealthCheck)
+
+	log.Println("Server starting on :" + cfg.Server.Port)
+	if err := router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatal(err)
 	}
 }
