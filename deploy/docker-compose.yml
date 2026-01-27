@@ -6,12 +6,12 @@ services:
     container_name: member_api
     restart: unless-stopped
     ports:
-      - '9876:9876'
+      - '${PORT:-8080}:8081'
     environment:
       - POSTGRES_DSN=${POSTGRES_DSN}
       - JWT_SECRET=${JWT_SECRET}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     networks:
       - member_api_network
     labels:
