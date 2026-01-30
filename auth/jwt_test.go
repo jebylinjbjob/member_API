@@ -512,3 +512,55 @@ func TestJWTSecretInitialization(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
+	setupTest(t)
+
+	tests := []struct {
+		name        string
+		setupToken  func() string
+		wantErr     bool
+		description string
+	}{
+		{
+			name: "嘗試使用 none 算法 (algorithm substitution attack)",
+			setupToken: func() string {
+				// 創建一個使用 "none" 算法的 token
+				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				return tokenString
+			},
+			wantErr:     true,
+			description: "使用 none 算法的 token 應該被拒絕",
+		},
+		{
+			name: "正常的 HS256 token 應該通過",
+			setupToken: func() string {
+				token, _ := GenerateToken(1, "valid@example.com")
+				return token
+			},
+			wantErr:     false,
+			description: "正確的 HS256 token 應該通過驗證",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenString := tt.setupToken()
+			claims, err := ValidateToken(tokenString)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s\nValidateToken() error = %v, wantErr %v", tt.description, err, tt.wantErr)
+			}
+
+			if tt.wantErr && claims != nil {
+				t.Error("驗證失敗時應返回 nil claims")
+			}
+
+			if !tt.wantErr && claims == nil {
+				t.Error("驗證成功時應返回有效的 claims")
+			}
+		})
+	}
+}
