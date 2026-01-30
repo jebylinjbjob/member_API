@@ -47,9 +47,12 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		// 驗證簽名算法，防止算法替換攻擊
+		// 第一步：確保使用 HMAC 算法（拒絕 RSA, ECDSA, none 等）
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}
+		// 第二步：只接受 HS256，拒絕 HS384 和 HS512
+		// 這確保了與我們的密鑰生成和期望算法的一致性
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, jwt.ErrSignatureInvalid
 		}
