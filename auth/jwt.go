@@ -49,8 +49,12 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return jwtSecret, nil
 	})
 
-	if err != nil || !token.Valid {
+	if err != nil {
 		return nil, err
+	}
+
+	if token == nil || !token.Valid {
+		return nil, jwt.ErrTokenInvalidClaims
 	}
 
 	return claims, nil
