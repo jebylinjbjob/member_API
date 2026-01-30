@@ -11,8 +11,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o member_api ./main.go
 
 FROM alpine:3.21
-RUN apk --no-cache add ca-certificates && \
-    apk --no-cache upgrade && \
+RUN apk --no-cache add ca-certificates libssl3 libcrypto3 && \
     update-ca-certificates
 WORKDIR /app
 
