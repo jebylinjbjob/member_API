@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   member_api:
@@ -6,16 +6,17 @@ services:
     container_name: member_api
     restart: unless-stopped
     ports:
-      - '${PORT:-8080}:8081'
+      - "8080:8080"
     environment:
+      - PORT=8080
       - POSTGRES_DSN=${POSTGRES_DSN}
       - JWT_SECRET=${JWT_SECRET}
     extra_hosts:
-      - 'host.docker.internal:host-gateway'
+      - "host.docker.internal:host-gateway"
     networks:
       - member_api_network
     labels:
-      - 'com.centurylinklabs.watchtower.enable=true'
+      - "com.centurylinklabs.watchtower.enable=true"
 
   watchtower:
     image: containrrr/watchtower:latest

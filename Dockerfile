@@ -18,9 +18,6 @@ WORKDIR /app
 
 COPY --from=builder /src/member_api ./member_api
 
-ARG PORT=8080
-EXPOSE ${PORT}
-
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 

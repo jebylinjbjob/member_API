@@ -158,15 +158,10 @@ func main() {
 	// 添加一個簡單的健康檢查端點
 	Router.GET("/health", HealthCheck)
 
-	// // 啟動服務器
+	// 啟動服務器
 	cfg := config.Load()
-	router := gin.Default()
-	routes.SetupRouter(router)
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	router.GET("/health", HealthCheck)
-
 	log.Println("Server starting on :" + cfg.Server.Port)
-	if err := router.Run(":" + cfg.Server.Port); err != nil {
+	if err := Router.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatal(err)
 	}
 }
