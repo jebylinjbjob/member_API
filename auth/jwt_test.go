@@ -565,9 +565,9 @@ func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
 				// 在真實攻擊中，攻擊者會嘗試使用不同的算法來繞過驗證
 				// 我們創建一個格式正確但算法錯誤的 token
 				parts := []string{
-					"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9", // RS256 header in base64
+					"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",                        // RS256 header in base64
 					"eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImF0dGFja2VyQGV4YW1wbGUuY29tIn0", // payload
-					"fake-rsa-signature", // 假簽名
+					"fake-rsa-signature",                                          // 假簽名
 				}
 				return strings.Join(parts, ".")
 			},
