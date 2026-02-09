@@ -352,8 +352,15 @@ func TestValidateTokenSignature(t *testing.T) {
 				validToken, _ := GenerateToken(1, "test@example.com")
 				parts := strings.Split(validToken, ".")
 				if len(parts) == 3 {
-					// 修改簽名部分
-					parts[2] = parts[2][:len(parts[2])-1] + "X"
+					// 完全替換簽名為不同的值，確保篡改有效
+					if len(parts[2]) > 0 {
+						// 將簽名反轉以確保完全不同
+						runes := []rune(parts[2])
+						for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+							runes[i], runes[j] = runes[j], runes[i]
+						}
+						parts[2] = string(runes)
+					}
 					return strings.Join(parts, ".")
 				}
 				return validToken
