@@ -512,3 +512,95 @@ func TestJWTSecretInitialization(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
+	setupTest(t)
+
+	tests := []struct {
+		name        string
+		setupToken  func() string
+		wantErr     bool
+		description string
+	}{
+		{
+			name: "嘗試使用 none 算法 (algorithm substitution attack)",
+			setupToken: func() string {
+				// 創建一個使用 "none" 算法的 token
+				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				return tokenString
+			},
+			wantErr:     true,
+			description: "使用 none 算法的 token 應該被拒絕",
+		},
+		{
+			name: "嘗試使用 HS384 算法 (不同的 HMAC 算法)",
+			setupToken: func() string {
+				// 使用 HS384 而不是 HS256
+				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				token := jwt.NewWithClaims(jwt.SigningMethodHS384, claims)
+				tokenString, _ := token.SignedString(jwtSecret)
+				return tokenString
+			},
+			wantErr:     true,
+			description: "使用 HS384 算法的 token 應該被拒絕（只接受 HS256）",
+		},
+		{
+			name: "嘗試使用 HS512 算法 (不同的 HMAC 算法)",
+			setupToken: func() string {
+				// 使用 HS512 而不是 HS256
+				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+				tokenString, _ := token.SignedString(jwtSecret)
+				return tokenString
+			},
+			wantErr:     true,
+			description: "使用 HS512 算法的 token 應該被拒絕（只接受 HS256）",
+		},
+		{
+			name: "嘗試使用 RS256 算法 (RSA 非對稱算法攻擊)",
+			setupToken: func() string {
+				// 構造一個假的 RS256 token
+				// 在真實攻擊中，攻擊者會嘗試使用不同的算法來繞過驗證
+				// 我們創建一個格式正確但算法錯誤的 token
+				parts := []string{
+					"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",                        // RS256 header in base64
+					"eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImF0dGFja2VyQGV4YW1wbGUuY29tIn0", // payload
+					"fake-rsa-signature",                                          // 假簽名
+				}
+				return strings.Join(parts, ".")
+			},
+			wantErr:     true,
+			description: "使用 RS256 算法的 token 應該被拒絕（防止非對稱算法攻擊）",
+		},
+		{
+			name: "正常的 HS256 token 應該通過",
+			setupToken: func() string {
+				token, _ := GenerateToken(1, "valid@example.com")
+				return token
+			},
+			wantErr:     false,
+			description: "正確的 HS256 token 應該通過驗證",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenString := tt.setupToken()
+			claims, err := ValidateToken(tokenString)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("%s\nValidateToken() error = %v, wantErr %v", tt.description, err, tt.wantErr)
+			}
+
+			if tt.wantErr && claims != nil {
+				t.Error("驗證失敗時應返回 nil claims")
+			}
+
+			if !tt.wantErr && claims == nil {
+				t.Error("驗證成功時應返回有效的 claims")
+			}
+		})
+	}
+}
