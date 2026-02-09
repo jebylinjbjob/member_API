@@ -155,8 +155,8 @@ func main() {
 	// Swagger 文檔路由
 	Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// 添加一個簡單的健康檢查端點
-	Router.GET("/health", HealthCheck)
+	// 添加一個簡單的健康檢查端點（支援 GET 和 HEAD 請求）
+	Router.Any("/health", HealthCheck)
 
 	// 啟動服務器
 	cfg := config.Load()
