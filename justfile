@@ -37,6 +37,9 @@ graphql:
     go get github.com/99designs/gqlgen@v0.17.85
     go run github.com/99designs/gqlgen generate
 
+lint:
+    go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2 run ./...
+
 # 清理
 clean:
     rm -rf bin/ coverage.out coverage.html
