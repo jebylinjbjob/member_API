@@ -25,6 +25,7 @@ jobs:
       - name: downcase REPO
         run: |
           echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -34,7 +35,7 @@ jobs:
 
       # Scheduled scan: scan existing published image
       - name: Run Trivy vulnerability scanner on published image
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@0.33.1
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         with:
           image-ref: ghcr.io/${{ env.REPO }}:latest
@@ -44,12 +45,12 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security tab (scheduled)
         uses: github/codeql-action/upload-sarif@v4
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && always() && hashFiles('trivy-docker-results.sarif') != ''
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && always()
         with:
           sarif_file: "trivy-docker-results.sarif"
 
       - name: Run Trivy vulnerability scanner (table output for scheduled)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@0.33.1
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         with:
           image-ref: ghcr.io/${{ env.REPO }}:latest
@@ -84,6 +85,7 @@ jobs:
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "commit=${{ github.sha }}" >> $GITHUB_OUTPUT
+
       - name: Docker meta
         id: docker-meta
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
@@ -96,6 +98,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+
       - name: Build for scanning
         uses: docker/build-push-action@v6
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
@@ -112,7 +115,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner on Docker image
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@0.33.1
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         with:
           image-ref: ${{ env.REPO }}:scan
@@ -122,12 +125,12 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') && always() && hashFiles('trivy-docker-results.sarif') != ''
+        if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') && always()
         with:
           sarif_file: "trivy-docker-results.sarif"
 
       - name: Run Trivy vulnerability scanner (table output)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@0.33.1
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         with:
           image-ref: ${{ env.REPO }}:scan
