@@ -55,6 +55,7 @@ func GetUsers(c *gin.Context) {
 
 	users := make([]User, len(members))
 	for i, member := range members {
+		// #nosec G115 - member.ID 來自資料庫，不會溢位
 		users[i] = User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 	}
 
@@ -101,6 +102,7 @@ func GetUserByID(c *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	c.JSON(
 		http.StatusOK,
 		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},

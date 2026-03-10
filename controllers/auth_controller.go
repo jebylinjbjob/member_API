@@ -65,6 +65,7 @@ func Register(input *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 
 	// 生成 token
@@ -124,6 +125,7 @@ func Login(input *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 
 	// 生成 token
@@ -181,6 +183,7 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	c.JSON(
 		http.StatusOK,
 		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},

@@ -190,7 +190,8 @@ func TestValidateToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "完全無效的字串",
+			name: "完全無效的字串",
+			// #nosec G101 - 測試用的假 token
 			token:   "not-a-jwt-token",
 			wantErr: true,
 		},
@@ -205,12 +206,14 @@ func TestValidateToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Base64 但不是有效的 JWT",
+			name: "Base64 但不是有效的 JWT",
+			// #nosec G101 - 測試用的假 token
 			token:   "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalid",
 			wantErr: true,
 		},
 		{
-			name:    "格式正確但簽名無效",
+			name: "格式正確但簽名無效",
+			// #nosec G101 - 測試用的假 token
 			token:   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ.invalidsignature",
 			wantErr: true,
 		},
