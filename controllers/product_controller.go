@@ -1,10 +1,9 @@
 package controllers
 
 import (
+	"member_API/services"
 	"net/http"
 	"strconv"
-
-	"member_API/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,30 +18,30 @@ func SetupProductController(database *gorm.DB) {
 
 // ProductResponse represents a simplified product record for API responses.
 type ProductResponse struct {
-	ID                 uint    `json:"id" example:"1"`
-	ProductName        string  `json:"product_name" example:"iPhone 15 Pro"`
-	ProductPrice       float64 `json:"product_price" example:"35900"`
+	ID                 uint    `json:"id"                  example:"1"`
+	ProductName        string  `json:"product_name"        example:"iPhone 15 Pro"`
+	ProductPrice       float64 `json:"product_price"       example:"35900"`
 	ProductDescription string  `json:"product_description" example:"最新款 iPhone"`
-	ProductImage       string  `json:"product_image" example:"https://example.com/image.jpg"`
-	ProductStock       int     `json:"product_stock" example:"100"`
+	ProductImage       string  `json:"product_image"       example:"https://example.com/image.jpg"`
+	ProductStock       int     `json:"product_stock"       example:"100"`
 }
 
 // CreateProductRequest represents the request body for creating a product.
 type CreateProductRequest struct {
-	ProductName        string  `json:"product_name" binding:"required" example:"iPhone 15 Pro"`
-	ProductPrice       float64 `json:"product_price" binding:"required,gt=0" example:"35900"`
-	ProductDescription string  `json:"product_description" example:"最新款 iPhone"`
-	ProductImage       string  `json:"product_image" example:"https://example.com/image.jpg"`
-	ProductStock       int     `json:"product_stock" binding:"required,gte=0" example:"100"`
+	ProductName        string  `json:"product_name"        binding:"required"       example:"iPhone 15 Pro"`
+	ProductPrice       float64 `json:"product_price"       binding:"required,gt=0"  example:"35900"`
+	ProductDescription string  `json:"product_description"                          example:"最新款 iPhone"`
+	ProductImage       string  `json:"product_image"                                example:"https://example.com/image.jpg"`
+	ProductStock       int     `json:"product_stock"       binding:"required,gte=0" example:"100"`
 }
 
 // UpdateProductRequest represents the request body for updating a product.
 type UpdateProductRequest struct {
-	ProductName        *string  `json:"product_name" example:"iPhone 15 Pro Max"`
-	ProductPrice       *float64 `json:"product_price" example:"42900"`
+	ProductName        *string  `json:"product_name"        example:"iPhone 15 Pro Max"`
+	ProductPrice       *float64 `json:"product_price"       example:"42900"`
 	ProductDescription *string  `json:"product_description" example:"更新的描述"`
-	ProductImage       *string  `json:"product_image" example:"https://example.com/new-image.jpg"`
-	ProductStock       *int     `json:"product_stock" example:"50"`
+	ProductImage       *string  `json:"product_image"       example:"https://example.com/new-image.jpg"`
+	ProductStock       *int     `json:"product_stock"       example:"50"`
 }
 
 // GetProducts returns a collection of products from the database.

@@ -2,10 +2,9 @@ package controllers
 
 import (
 	"errors"
+	"member_API/models"
 	"net/http"
 	"strconv"
-
-	"member_API/models"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -20,8 +19,8 @@ func SetupUserController(database *gorm.DB) {
 
 // User represents a simplified member record.
 type User struct {
-	ID    int64  `json:"id" example:"1"`
-	Name  string `json:"name" example:"張三"`
+	ID    int64  `json:"id"    example:"1"`
+	Name  string `json:"name"  example:"張三"`
 	Email string `json:"email" example:"user@example.com"`
 }
 
@@ -102,7 +101,10 @@ func GetUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	c.JSON(
+		http.StatusOK,
+		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},
+	)
 }
 
 // DeleteUserByID deletes a user by ID from the database.
@@ -130,7 +132,9 @@ func DeleteUserByID(c *gin.Context) {
 		return
 	}
 
-	if err := db.WithContext(c.Request.Context()).Delete(&models.Member{}, memberID).Error; err != nil {
+	if err := db.WithContext(c.Request.Context()).
+		Delete(&models.Member{}, memberID).
+		Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

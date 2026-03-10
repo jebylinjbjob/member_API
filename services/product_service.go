@@ -17,7 +17,13 @@ func NewProductService(db *gorm.DB) *ProductService {
 }
 
 // CreateProduct 建立新產品
-func (s *ProductService) CreateProduct(name string, price float64, description, image string, stock int, creatorId uint) (*models.Product, error) {
+func (s *ProductService) CreateProduct(
+	name string,
+	price float64,
+	description, image string,
+	stock int,
+	creatorId uint,
+) (*models.Product, error) {
 	now := time.Now()
 	product := &models.Product{
 		Base: models.Base{
@@ -40,7 +46,11 @@ func (s *ProductService) CreateProduct(name string, price float64, description, 
 }
 
 // UpdateProduct 更新產品資訊
-func (s *ProductService) UpdateProduct(id uint, updates map[string]interface{}, modifierId uint) (*models.Product, error) {
+func (s *ProductService) UpdateProduct(
+	id uint,
+	updates map[string]interface{},
+	modifierId uint,
+) (*models.Product, error) {
 	var product models.Product
 	if err := s.DB.Where("is_deleted = ?", false).First(&product, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,7 +76,7 @@ func (s *ProductService) UpdateProduct(id uint, updates map[string]interface{}, 
 }
 
 // DeleteProduct 軟刪除產品
-func (s *ProductService) DeleteProduct(id uint, deleterId uint) error {
+func (s *ProductService) DeleteProduct(id, deleterId uint) error {
 	now := time.Now()
 	result := s.DB.Model(&models.Product{}).
 		Where("id = ? AND is_deleted = ?", id, false).
@@ -106,7 +116,10 @@ func (s *ProductService) GetProducts(limit, offset int) ([]models.Product, int64
 	var total int64
 
 	// 取得總數
-	if err := s.DB.Model(&models.Product{}).Where("is_deleted = ?", false).Count(&total).Error; err != nil {
+	if err := s.DB.Model(&models.Product{}).
+		Where("is_deleted = ?", false).
+		Count(&total).
+		Error; err != nil {
 		return nil, 0, err
 	}
 

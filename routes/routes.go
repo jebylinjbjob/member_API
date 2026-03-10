@@ -1,13 +1,12 @@
 package routes
 
 import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-
 	"member_API/auth"
 	"member_API/controllers"
 	"member_API/graphql"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter registers API routes on the provided Gin engine.
@@ -28,7 +27,10 @@ func SetupRouter(Router *gin.Engine) {
 	Router.Any("/graphql", func(c *gin.Context) {
 		graphqlHandler := graphql.GetHandler()
 		if graphqlHandler == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "GraphQL handler not initialized"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "GraphQL handler not initialized"},
+			)
 			return
 		}
 		graphqlHandler.ServeHTTP(c.Writer, c.Request)

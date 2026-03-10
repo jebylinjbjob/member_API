@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"log"
-	"os"
-	"time"
-
 	"member_API/config"
 	"member_API/controllers"
-	_ "member_API/docs" // 導入 swagger 文檔
 	"member_API/graphql"
 	"member_API/models"
 	"member_API/routes"
+	"os"
+	"time"
+
+	_ "member_API/docs" // 導入 swagger 文檔
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv" // 新增
@@ -51,7 +51,9 @@ func initPostgreSQL() error {
 
 	dsn := os.Getenv("POSTGRES_DSN")
 	if dsn == "" {
-		log.Println("Warning: POSTGRES_DSN environment variable not set. Using default DSN for local development.")
+		log.Println(
+			"Warning: POSTGRES_DSN environment variable not set. Using default DSN for local development.",
+		)
 		return nil
 	}
 
@@ -115,7 +117,6 @@ func HealthCheck(c *gin.Context) {
 }
 
 func main() {
-
 	// 載入 .env 文件
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using environment variables")
@@ -125,14 +126,12 @@ func main() {
 	if err := initPostgreSQL(); err != nil {
 		log.Printf("Warning: PostgreSQL connection failed: %v\n", err)
 		log.Println("Starting server without PostgreSQL connection...")
-
 	} else {
 		defer func() {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Close(); err != nil {
 					log.Printf("Error closing PostgreSQL connection: %v\n", err)
 				}
-
 			} else {
 				log.Printf("Error retrieving SQL DB handle: %v\n", err)
 			}
