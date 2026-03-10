@@ -161,7 +161,6 @@ func main() {
 	cfg := config.Load()
 	log.Println("Server starting on :" + cfg.Server.Port)
 	if err := Router.Run(":" + cfg.Server.Port); err != nil {
-		log.Printf("Server failed to start: %v\n", err)
-		panic(err)
+		log.Fatalf("Server failed to start: %v\n", err)
 	}
 }
