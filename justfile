@@ -5,7 +5,7 @@ default:
 # 初始化開發環境
 setup:
     @echo "安裝 golangci-lint..."
-    @curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin v1.61.0
+    @curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin
     @echo "安裝相依套件..."
     go mod download
     @echo "設定完成！"
