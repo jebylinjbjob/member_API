@@ -2,8 +2,9 @@ package services
 
 import (
 	"errors"
-	"member_API/models"
 	"time"
+
+	"member_API/models"
 
 	"gorm.io/gorm"
 )

@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"time"
+
 	"member_API/config"
 	"member_API/controllers"
 	"member_API/graphql"
 	"member_API/models"
 	"member_API/routes"
-	"os"
-	"time"
 
 	_ "member_API/docs" // 導入 swagger 文檔
 
@@ -161,6 +162,7 @@ func main() {
 	cfg := config.Load()
 	log.Println("Server starting on :" + cfg.Server.Port)
 	if err := Router.Run(":" + cfg.Server.Port); err != nil {
-		log.Fatalf("Server failed to start: %v\n", err)
+		log.Printf("Server failed to start: %v\n", err)
+		panic(err)
 	}
 }

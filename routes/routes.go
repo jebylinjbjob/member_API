@@ -1,10 +1,11 @@
 package routes
 
 import (
+	"net/http"
+
 	"member_API/auth"
 	"member_API/controllers"
 	"member_API/graphql"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )

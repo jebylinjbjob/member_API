@@ -2,10 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"net/http"
+
 	"member_API/auth"
 	"member_API/models"
 	"member_API/services"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

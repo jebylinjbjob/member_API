@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"member_API/services"
 	"net/http"
 	"strconv"
+
+	"member_API/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
