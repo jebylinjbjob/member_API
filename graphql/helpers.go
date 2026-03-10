@@ -2,10 +2,11 @@ package graphql
 
 import (
 	"context"
-	"member_API/graphql/model"
-	"member_API/models"
 	"strconv"
 	"time"
+
+	"member_API/graphql/model"
+	"member_API/models"
 )
 
 // dbToModel converts DB Member to GraphQL model

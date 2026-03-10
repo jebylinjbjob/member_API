@@ -2,6 +2,14 @@
 default:
     @just --list
 
+# 初始化開發環境
+setup:
+    @echo "安裝 golangci-lint..."
+    @curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin
+    @echo "安裝相依套件..."
+    go mod download
+    @echo "設定完成！"
+
 # 本地運行
 run:
     go run main.go
@@ -17,6 +25,14 @@ test:
 # 格式化
 fmt:
     go fmt ./...
+
+# 程式碼檢查
+lint:
+    ./bin/golangci-lint run ./...
+
+# 程式碼檢查並自動修復
+lint-fix:
+    ./bin/golangci-lint run --fix ./...
 
 # 整理依賴
 tidy:
@@ -45,6 +61,7 @@ clean:
 auto_check:
     just tidy
     just fmt
+    just lint
     just test
     just build
     just graphql

@@ -13,13 +13,13 @@ import (
 )
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
+	Email    string `json:"email"    binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=6" example:"password123"`
 }
 
 type RegisterRequest struct {
-	Name     string `json:"name" binding:"required" example:"張三"`
-	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
+	Name     string `json:"name"     binding:"required"       example:"張三"`
+	Email    string `json:"email"    binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=6" example:"password123"`
 }
 
@@ -66,6 +66,7 @@ func Register(input *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 
 	// 生成 token
@@ -110,7 +111,6 @@ func Login(input *gin.Context) {
 	err := db.WithContext(input.Request.Context()).
 		Where("email = ?", req.Email).
 		First(&member).Error
-
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
@@ -126,6 +126,7 @@ func Login(input *gin.Context) {
 		return
 	}
 
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 
 	// 生成 token
@@ -183,5 +184,9 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
+	c.JSON(
+		http.StatusOK,
+		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},
+	)
 }

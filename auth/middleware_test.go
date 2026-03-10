@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -26,7 +27,7 @@ func TestAuthMiddleware(t *testing.T) {
 	t.Run("Missing Authorization Header", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Request = httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 
 		AuthMiddleware()(c)
 
@@ -38,7 +39,7 @@ func TestAuthMiddleware(t *testing.T) {
 	t.Run("Invalid Authorization Header Format - No Bearer", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Request = httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		c.Request.Header.Set("Authorization", "InvalidToken")
 
 		AuthMiddleware()(c)
@@ -51,7 +52,7 @@ func TestAuthMiddleware(t *testing.T) {
 	t.Run("Invalid Authorization Header Format - Only Bearer", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Request = httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		c.Request.Header.Set("Authorization", "Bearer")
 
 		AuthMiddleware()(c)
@@ -64,7 +65,7 @@ func TestAuthMiddleware(t *testing.T) {
 	t.Run("Invalid Token", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Request = httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		c.Request.Header.Set("Authorization", "Bearer invalid_token")
 
 		AuthMiddleware()(c)
@@ -99,7 +100,7 @@ func TestAuthMiddleware(t *testing.T) {
 		})
 
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		router.ServeHTTP(w, req)

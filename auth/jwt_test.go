@@ -190,7 +190,8 @@ func TestValidateToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "完全無效的字串",
+			name: "完全無效的字串",
+			// #nosec G101 - 測試用的假 token
 			token:   "not-a-jwt-token",
 			wantErr: true,
 		},
@@ -205,12 +206,14 @@ func TestValidateToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Base64 但不是有效的 JWT",
+			name: "Base64 但不是有效的 JWT",
+			// #nosec G101 - 測試用的假 token
 			token:   "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalid",
 			wantErr: true,
 		},
 		{
-			name:    "格式正確但簽名無效",
+			name: "格式正確但簽名無效",
+			// #nosec G101 - 測試用的假 token
 			token:   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ.invalidsignature",
 			wantErr: true,
 		},
@@ -287,7 +290,12 @@ func TestValidateTokenExpired(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			claims := createTestClaims(1, "test@example.com", tt.expiryTime, time.Now().Add(-1*time.Hour))
+			claims := createTestClaims(
+				1,
+				"test@example.com",
+				tt.expiryTime,
+				time.Now().Add(-1*time.Hour),
+			)
 			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 			tokenString, err := token.SignedString(jwtSecret)
 			if err != nil {
@@ -322,7 +330,12 @@ func TestValidateTokenSignature(t *testing.T) {
 		{
 			name: "使用錯誤的 secret 簽名",
 			setupToken: func() string {
-				claims := createTestClaims(1, "test@example.com", time.Now().Add(24*time.Hour), time.Now())
+				claims := createTestClaims(
+					1,
+					"test@example.com",
+					time.Now().Add(24*time.Hour),
+					time.Now(),
+				)
 				token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 				tokenString, _ := token.SignedString([]byte("wrong-secret-key"))
 				return tokenString
@@ -385,7 +398,12 @@ func TestValidateTokenSignature(t *testing.T) {
 			claims, err := ValidateToken(tokenString)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("%s\nValidateToken() error = %v, wantErr %v", tt.description, err, tt.wantErr)
+				t.Errorf(
+					"%s\nValidateToken() error = %v, wantErr %v",
+					tt.description,
+					err,
+					tt.wantErr,
+				)
 			}
 
 			if tt.wantErr && claims != nil {
@@ -415,7 +433,12 @@ func TestValidateTokenValid(t *testing.T) {
 		}
 
 		// Case 2: 過期的 token - 應觸發 err != nil 且 token.Valid = false
-		expiredClaims := createTestClaims(2, "expired@example.com", time.Now().Add(-1*time.Hour), time.Now().Add(-2*time.Hour))
+		expiredClaims := createTestClaims(
+			2,
+			"expired@example.com",
+			time.Now().Add(-1*time.Hour),
+			time.Now().Add(-2*time.Hour),
+		)
 		expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, expiredClaims)
 		expiredTokenString, _ := expiredToken.SignedString(jwtSecret)
 
@@ -533,7 +556,12 @@ func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
 			name: "嘗試使用 none 算法 (algorithm substitution attack)",
 			setupToken: func() string {
 				// 創建一個使用 "none" 算法的 token
-				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				claims := createTestClaims(
+					1,
+					"attacker@example.com",
+					time.Now().Add(24*time.Hour),
+					time.Now(),
+				)
 				token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
 				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
 				return tokenString
@@ -545,7 +573,12 @@ func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
 			name: "嘗試使用 HS384 算法 (不同的 HMAC 算法)",
 			setupToken: func() string {
 				// 使用 HS384 而不是 HS256
-				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				claims := createTestClaims(
+					1,
+					"attacker@example.com",
+					time.Now().Add(24*time.Hour),
+					time.Now(),
+				)
 				token := jwt.NewWithClaims(jwt.SigningMethodHS384, claims)
 				tokenString, _ := token.SignedString(jwtSecret)
 				return tokenString
@@ -557,7 +590,12 @@ func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
 			name: "嘗試使用 HS512 算法 (不同的 HMAC 算法)",
 			setupToken: func() string {
 				// 使用 HS512 而不是 HS256
-				claims := createTestClaims(1, "attacker@example.com", time.Now().Add(24*time.Hour), time.Now())
+				claims := createTestClaims(
+					1,
+					"attacker@example.com",
+					time.Now().Add(24*time.Hour),
+					time.Now(),
+				)
 				token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 				tokenString, _ := token.SignedString(jwtSecret)
 				return tokenString
@@ -598,7 +636,12 @@ func TestValidateTokenAlgorithmSubstitution(t *testing.T) {
 			claims, err := ValidateToken(tokenString)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("%s\nValidateToken() error = %v, wantErr %v", tt.description, err, tt.wantErr)
+				t.Errorf(
+					"%s\nValidateToken() error = %v, wantErr %v",
+					tt.description,
+					err,
+					tt.wantErr,
+				)
 			}
 
 			if tt.wantErr && claims != nil {

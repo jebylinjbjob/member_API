@@ -21,7 +21,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 檢查 Bearer 前綴
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header 格式錯誤，應為 'Bearer {token}'"})
+			c.JSON(
+				http.StatusUnauthorized,
+				gin.H{"error": "Authorization header 格式錯誤，應為 'Bearer {token}'"},
+			)
 			c.Abort()
 			return
 		}

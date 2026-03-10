@@ -20,8 +20,8 @@ func SetupUserController(database *gorm.DB) {
 
 // User represents a simplified member record.
 type User struct {
-	ID    int64  `json:"id" example:"1"`
-	Name  string `json:"name" example:"張三"`
+	ID    int64  `json:"id"    example:"1"`
+	Name  string `json:"name"  example:"張三"`
 	Email string `json:"email" example:"user@example.com"`
 }
 
@@ -56,6 +56,7 @@ func GetUsers(c *gin.Context) {
 
 	users := make([]User, len(members))
 	for i, member := range members {
+		// #nosec G115 - member.ID 來自資料庫，不會溢位
 		users[i] = User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
 	}
 
@@ -102,7 +103,11 @@ func GetUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	// #nosec G115 - member.ID 來自資料庫，不會溢位
+	c.JSON(
+		http.StatusOK,
+		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},
+	)
 }
 
 // DeleteUserByID deletes a user by ID from the database.
@@ -130,7 +135,9 @@ func DeleteUserByID(c *gin.Context) {
 		return
 	}
 
-	if err := db.WithContext(c.Request.Context()).Delete(&models.Member{}, memberID).Error; err != nil {
+	if err := db.WithContext(c.Request.Context()).
+		Delete(&models.Member{}, memberID).
+		Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
