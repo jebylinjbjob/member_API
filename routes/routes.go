@@ -6,6 +6,7 @@ import (
 	"member_API/auth"
 	"member_API/controllers"
 	"member_API/graphql"
+	"member_API/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +14,7 @@ import (
 // SetupRouter registers API routes on the provided Gin engine.
 func SetupRouter(router *gin.Engine) {
 	router.GET("/Hello", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "Hello, RESTful API!"})
+		c.JSON(200, gin.H{response.KeyMessage: "Hello, RESTful API!"})
 	})
 
 	// Public - no authentication required
@@ -22,6 +23,8 @@ func SetupRouter(router *gin.Engine) {
 		// Authentication-related routes
 		public.POST("/register", controllers.Register)
 		public.POST("/login", controllers.Login)
+		public.POST("/auth/forgot-password", controllers.ForgotPassword)
+		public.POST("/auth/reset-password", controllers.ResetPassword)
 	}
 
 	// GraphQL endpoint
@@ -30,7 +33,7 @@ func SetupRouter(router *gin.Engine) {
 		if graphqlHandler == nil {
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"error": "GraphQL handler not initialized"},
+				gin.H{response.KeyError: "GraphQL handler not initialized"},
 			)
 			return
 		}

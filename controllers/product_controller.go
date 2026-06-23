@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"member_API/auth"
+	"member_API/models"
+	"member_API/response"
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
@@ -61,8 +64,8 @@ type UpdateProductRequest struct {
 func GetProducts(c *gin.Context) {
 	if productDB == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"products": []ProductResponse{},
-			"message":  "database connection not configured",
+			"products":          []ProductResponse{},
+			response.KeyMessage: response.MsgDBNotConfigured,
 		})
 		return
 	}
@@ -82,7 +85,7 @@ func GetProducts(c *gin.Context) {
 	svc := services.NewProductService(productDB)
 	products, total, err := svc.GetProducts(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -123,15 +126,15 @@ func GetProducts(c *gin.Context) {
 func GetProductByID(c *gin.Context) {
 	if productDB == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"product": nil,
-			"message": "database connection not configured",
+			"product":           nil,
+			response.KeyMessage: response.MsgDBNotConfigured,
 		})
 		return
 	}
 
 	productID, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: "invalid product id"})
 		return
 	}
 
@@ -140,10 +143,10 @@ func GetProductByID(c *gin.Context) {
 	product, err := svc.GetProductByID(uint(productID))
 	if err != nil {
 		if err.Error() == "產品不存在" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			c.JSON(http.StatusNotFound, gin.H{response.KeyError: "product not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -174,24 +177,21 @@ func GetProductByID(c *gin.Context) {
 // @Router /product [post]
 func CreateProduct(c *gin.Context) {
 	if productDB == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database connection not configured"})
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfigured},
+		)
 		return
 	}
 
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
 	// 獲取當前用戶 ID（從 JWT token 中）
-	userID, exists := c.Get("user_id")
-	var creatorID uint
-	if exists {
-		if id, ok := userID.(uint); ok {
-			creatorID = id
-		}
-	}
+	creatorID := resolveMemberIDFromContext(c)
 
 	// 使用 Service 層
 	svc := services.NewProductService(productDB)
@@ -204,7 +204,7 @@ func CreateProduct(c *gin.Context) {
 		creatorID,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -217,7 +217,7 @@ func CreateProduct(c *gin.Context) {
 			ProductImage:       product.ProductImage,
 			ProductStock:       product.ProductStock,
 		},
-		"message": "product created successfully",
+		response.KeyMessage: "product created successfully",
 	})
 }
 
@@ -238,30 +238,27 @@ func CreateProduct(c *gin.Context) {
 // @Router /product/{id} [put]
 func UpdateProduct(c *gin.Context) {
 	if productDB == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database connection not configured"})
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfigured},
+		)
 		return
 	}
 
 	productID, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: "invalid product id"})
 		return
 	}
 
 	var req UpdateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
 	// 獲取當前用戶 ID
-	userID, exists := c.Get("user_id")
-	var modifierID uint
-	if exists {
-		if id, ok := userID.(uint); ok {
-			modifierID = id
-		}
-	}
+	modifierID := resolveMemberIDFromContext(c)
 
 	// 構建更新欄位
 	updates := make(map[string]interface{})
@@ -286,10 +283,10 @@ func UpdateProduct(c *gin.Context) {
 	product, err := svc.UpdateProduct(uint(productID), updates, modifierID)
 	if err != nil {
 		if err.Error() == "產品不存在" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			c.JSON(http.StatusNotFound, gin.H{response.KeyError: "product not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -302,7 +299,7 @@ func UpdateProduct(c *gin.Context) {
 			ProductImage:       product.ProductImage,
 			ProductStock:       product.ProductStock,
 		},
-		"message": "product updated successfully",
+		response.KeyMessage: "product updated successfully",
 	})
 }
 
@@ -322,35 +319,48 @@ func UpdateProduct(c *gin.Context) {
 // @Router /product/{id} [delete]
 func DeleteProduct(c *gin.Context) {
 	if productDB == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database connection not configured"})
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfigured},
+		)
 		return
 	}
 
 	productID, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: "invalid product id"})
 		return
 	}
 
 	// 獲取當前用戶 ID
-	userID, exists := c.Get("user_id")
-	var deleterID uint
-	if exists {
-		if id, ok := userID.(uint); ok {
-			deleterID = id
-		}
-	}
+	deleterID := resolveMemberIDFromContext(c)
 
 	// 使用 Service 層
 	svc := services.NewProductService(productDB)
 	if err := svc.DeleteProduct(uint(productID), deleterID); err != nil {
 		if err.Error() == "產品不存在或已被刪除" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			c.JSON(http.StatusNotFound, gin.H{response.KeyError: "product not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "product deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{response.KeyMessage: "product deleted successfully"})
+}
+
+func resolveMemberIDFromContext(c *gin.Context) uint {
+	userUUID, ok := auth.UserUUIDFromContext(c)
+	if !ok || productDB == nil {
+		return 0
+	}
+
+	var member models.Member
+	if err := productDB.Select("id").
+		Where("uuid = ?", userUUID).
+		First(&member).Error; err != nil {
+		return 0
+	}
+
+	return member.ID
 }

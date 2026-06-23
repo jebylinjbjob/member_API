@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,6 +24,9 @@ func TestAuthMiddleware(t *testing.T) {
 			t.Errorf("Failed to unset JWT_SECRET: %v", err)
 		}
 	}()
+	jwtSecret = []byte("test_secret_key_for_testing")
+	jwtIssuer = defaultIssuer
+	jwtAudience = defaultAudience
 
 	t.Run("Missing Authorization Header", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -76,25 +80,19 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Valid Token", func(t *testing.T) {
-		// Generate a valid token for testing
-		token, err := GenerateToken(1, "test@example.com")
+		userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		token, err := GenerateToken(userID, defaultScope)
 		assert.NoError(t, err)
 
-		// Create a router to test the middleware
 		router := gin.New()
 		nextCalled := false
 		router.Use(AuthMiddleware())
 		router.GET("/", func(c *gin.Context) {
 			nextCalled = true
 
-			// Verify context values
-			userID, exists := c.Get("user_id")
+			contextUserID, exists := c.Get("user_id")
 			assert.True(t, exists)
-			assert.Equal(t, int64(1), userID)
-
-			email, exists := c.Get("user_email")
-			assert.True(t, exists)
-			assert.Equal(t, "test@example.com", email)
+			assert.Equal(t, userID, contextUserID)
 
 			c.Status(http.StatusOK)
 		})

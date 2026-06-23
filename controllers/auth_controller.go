@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"member_API/auth"
 	"member_API/models"
+	"member_API/response"
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +30,15 @@ type AuthResponse struct {
 	User  User   `json:"user"`
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email" example:"user@example.com"`
+}
+
+type ResetPasswordRequest struct {
+	Token    string `json:"token"    binding:"required"       example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	Password string `json:"password" binding:"required,min=6" example:"newpassword123"`
+}
+
 // Register 用戶註冊
 // @Summary 用戶註冊
 // @Description 註冊新用戶，返回 JWT token 和用戶信息
@@ -42,13 +53,16 @@ type AuthResponse struct {
 // @Router /register [post]
 func Register(input *gin.Context) {
 	if db == nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+		input.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfiguredZH},
+		)
 		return
 	}
 
 	var req RegisterRequest
 	if err := input.ShouldBindJSON(&req); err != nil {
-		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		input.JSON(http.StatusBadRequest, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -59,20 +73,18 @@ func Register(input *gin.Context) {
 	member, err := svc.CreateMember(req.Name, req.Email, req.Password, 0)
 	if err != nil {
 		if err.Error() == "email 已被使用" {
-			input.JSON(http.StatusConflict, gin.H{"error": "該電子郵件已被註冊"})
+			input.JSON(http.StatusConflict, gin.H{response.KeyError: "該電子郵件已被註冊"})
 			return
 		}
-		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		input.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
-	// #nosec G115 - member.ID 來自資料庫，不會溢位
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+	user := User{ID: member.UUID.String(), Name: member.Name, Email: member.Email}
 
-	// 生成 token
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	token, err := auth.GenerateToken(member.UUID, "")
 	if err != nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		input.JSON(http.StatusInternalServerError, gin.H{response.KeyError: "Token 生成失敗"})
 		return
 	}
 
@@ -96,13 +108,16 @@ func Register(input *gin.Context) {
 // @Router /login [post]
 func Login(input *gin.Context) {
 	if db == nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+		input.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfiguredZH},
+		)
 		return
 	}
 
 	var req LoginRequest
 	if err := input.ShouldBindJSON(&req); err != nil {
-		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		input.JSON(http.StatusBadRequest, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
@@ -113,26 +128,24 @@ func Login(input *gin.Context) {
 		First(&member).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+			input.JSON(http.StatusUnauthorized, gin.H{response.KeyError: "電子郵件或密碼錯誤"})
 			return
 		}
-		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		input.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
 	// 驗證密碼
 	if !auth.CheckPassword(req.Password, member.PasswordHash) {
-		input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+		input.JSON(http.StatusUnauthorized, gin.H{response.KeyError: "電子郵件或密碼錯誤"})
 		return
 	}
 
-	// #nosec G115 - member.ID 來自資料庫，不會溢位
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+	user := User{ID: member.UUID.String(), Name: member.Name, Email: member.Email}
 
-	// 生成 token
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	token, err := auth.GenerateToken(member.UUID, "")
 	if err != nil {
-		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		input.JSON(http.StatusInternalServerError, gin.H{response.KeyError: "Token 生成失敗"})
 		return
 	}
 
@@ -155,38 +168,126 @@ func Login(input *gin.Context) {
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /profile [get]
 func GetProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未認證"})
+	userUUID, ok := auth.UserUUIDFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{response.KeyError: "未認證"})
 		return
 	}
 
 	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
-		return
-	}
-
-	idValue, ok := userID.(int64)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未認證"})
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfiguredZH},
+		)
 		return
 	}
 
 	var member models.Member
 	if err := db.WithContext(c.Request.Context()).
-		Select("id", "name", "email").
-		First(&member, idValue).Error; err != nil {
+		Select("id", "uuid", "name", "email").
+		Where("uuid = ?", userUUID).
+		First(&member).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用戶不存在"})
+			c.JSON(http.StatusNotFound, gin.H{response.KeyError: "用戶不存在"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
-	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	c.JSON(
 		http.StatusOK,
-		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},
+		gin.H{"user": User{ID: member.UUID.String(), Name: member.Name, Email: member.Email}},
 	)
+}
+
+// ForgotPassword 請求重設密碼（對應 fastapi-users POST /auth/forgot-password）
+// @Summary 忘記密碼
+// @Description 請求重設密碼，無論 email 是否存在皆回傳 202 Accepted
+// @Tags 認證
+// @Accept json
+// @Produce json
+// @Param request body ForgotPasswordRequest true "電子郵件"
+// @Success 202 "已接受請求"
+// @Failure 400 {object} map[string]string "請求參數錯誤"
+// @Failure 500 {object} map[string]string "服務器錯誤"
+// @Router /auth/forgot-password [post]
+func ForgotPassword(c *gin.Context) {
+	if db == nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfiguredZH},
+		)
+		return
+	}
+
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: err.Error()})
+		return
+	}
+
+	svc := services.NewMemberService(db)
+	member, err := svc.GetMemberByEmail(req.Email)
+	if err == nil {
+		token, tokenErr := auth.GenerateResetPasswordToken(member.UUID)
+		if tokenErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: "Token 生成失敗"})
+			return
+		}
+		// 對應 hopenet on_after_forgot_password：開發階段記錄 token，正式環境可改為寄信
+		log.Printf("User %s has forgot their password. Reset token: %s", member.UUID, token)
+	}
+
+	c.Status(http.StatusAccepted)
+}
+
+// ResetPassword 使用 token 重設密碼（對應 fastapi-users POST /auth/reset-password）
+// @Summary 重設密碼
+// @Description 使用 forgot-password 取得的 token 重設密碼
+// @Tags 認證
+// @Accept json
+// @Produce json
+// @Param request body ResetPasswordRequest true "重設密碼資訊"
+// @Success 200 "重設成功"
+// @Failure 400 {object} map[string]interface{} "token 無效或密碼不符合規則"
+// @Failure 500 {object} map[string]string "服務器錯誤"
+// @Router /auth/reset-password [post]
+func ResetPassword(c *gin.Context) {
+	if db == nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfiguredZH},
+		)
+		return
+	}
+
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"detail": gin.H{
+				"code":   "RESET_PASSWORD_INVALID_PASSWORD",
+				"reason": err.Error(),
+			},
+		})
+		return
+	}
+
+	userUUID, err := auth.ValidateResetPasswordToken(req.Token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"detail": auth.ErrResetPasswordBadToken.Error()})
+		return
+	}
+
+	svc := services.NewMemberService(db)
+	if err := svc.ResetPassword(userUUID, req.Password); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) || err.Error() == "會員不存在" {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": auth.ErrResetPasswordBadToken.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

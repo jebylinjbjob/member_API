@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"member_API/models"
+	"member_API/response"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func SetupUserController(database *gorm.DB) {
 
 // User represents a simplified member record.
 type User struct {
-	ID    int64  `json:"id"    example:"1"`
+	ID    string `json:"id"    example:"550e8400-e29b-41d4-a716-446655440000"`
 	Name  string `json:"name"  example:"張三"`
 	Email string `json:"email" example:"user@example.com"`
 }
@@ -39,25 +40,24 @@ type User struct {
 func GetUsers(c *gin.Context) {
 	if db == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"users":   []User{},
-			"message": "database connection not configured",
+			"users":             []User{},
+			response.KeyMessage: response.MsgDBNotConfigured,
 		})
 		return
 	}
 
 	var members []models.Member
 	if err := db.WithContext(c.Request.Context()).
-		Select("id", "name", "email").
+		Select("id", "uuid", "name", "email").
 		Limit(50).
 		Find(&members).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
 	users := make([]User, len(members))
 	for i, member := range members {
-		// #nosec G115 - member.ID 來自資料庫，不會溢位
-		users[i] = User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+		users[i] = User{ID: member.UUID.String(), Name: member.Name, Email: member.Email}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"users": users})
@@ -79,34 +79,33 @@ func GetUsers(c *gin.Context) {
 func GetUserByID(c *gin.Context) {
 	if db == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"user":    nil,
-			"message": "database connection not configured",
+			"user":              nil,
+			response.KeyMessage: response.MsgDBNotConfigured,
 		})
 		return
 	}
 
 	memberID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: "invalid user id"})
 		return
 	}
 
 	var member models.Member
 	if err := db.WithContext(c.Request.Context()).
-		Select("id", "name", "email").
+		Select("id", "uuid", "name", "email").
 		First(&member, memberID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{response.KeyError: "user not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
-	// #nosec G115 - member.ID 來自資料庫，不會溢位
 	c.JSON(
 		http.StatusOK,
-		gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}},
+		gin.H{"user": User{ID: member.UUID.String(), Name: member.Name, Email: member.Email}},
 	)
 }
 
@@ -125,22 +124,25 @@ func GetUserByID(c *gin.Context) {
 // @Router /user/{id} [delete]
 func DeleteUserByID(c *gin.Context) {
 	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database connection not configured"})
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{response.KeyError: response.MsgDBNotConfigured},
+		)
 		return
 	}
 
 	memberID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusBadRequest, gin.H{response.KeyError: "invalid user id"})
 		return
 	}
 
 	if err := db.WithContext(c.Request.Context()).
 		Delete(&models.Member{}, memberID).
 		Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{response.KeyError: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{response.KeyMessage: "user deleted successfully"})
 }

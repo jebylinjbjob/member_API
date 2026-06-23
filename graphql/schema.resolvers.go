@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"member_API/graphql/model"
 	"member_API/models"
+	"member_API/response"
 	"member_API/services"
 	"strconv"
 )
@@ -71,7 +72,7 @@ func (r *mutationResolver) DeleteMember(ctx context.Context, id string) (bool, e
 // CreateProduct is the resolver for the createProduct field.
 func (r *mutationResolver) CreateProduct(ctx context.Context, input model.CreateProductInput) (*model.Product, error) {
 	if r.DB == nil {
-		return nil, fmt.Errorf("database connection not configured")
+		return nil, fmt.Errorf("%s", response.MsgDBNotConfigured)
 	}
 
 	creatorID := getUserIDFromContext(ctx)
@@ -97,7 +98,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.Create
 // UpdateProduct is the resolver for the updateProduct field.
 func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input model.UpdateProductInput) (*model.Product, error) {
 	if r.DB == nil {
-		return nil, fmt.Errorf("database connection not configured")
+		return nil, fmt.Errorf("%s", response.MsgDBNotConfigured)
 	}
 
 	productID, err := strconv.ParseUint(id, 10, 32)
@@ -146,7 +147,7 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input m
 // DeleteProduct is the resolver for the deleteProduct field.
 func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, error) {
 	if r.DB == nil {
-		return false, fmt.Errorf("database connection not configured")
+		return false, fmt.Errorf("%s", response.MsgDBNotConfigured)
 	}
 
 	productID, err := strconv.ParseUint(id, 10, 32)

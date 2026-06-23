@@ -62,13 +62,10 @@ func formatID(id uint) string {
 	return strconv.FormatUint(uint64(id), 10)
 }
 
-// getUserIDFromContext extracts user ID from context
-func getUserIDFromContext(ctx context.Context) uint {
-	userID, ok := ctx.Value("user_id").(int64)
-	if !ok || userID <= 0 {
-		return 0
-	}
-	return uint(userID)
+// getUserIDFromContext extracts user ID from context.
+// GraphQL 尚未接入認證 middleware，目前固定回傳 0。
+func getUserIDFromContext(_ context.Context) uint {
+	return 0
 }
 
 // stringPtr converts string to *string pointer
