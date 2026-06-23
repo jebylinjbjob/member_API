@@ -5,7 +5,8 @@ default:
 # 初始化開發環境
 setup:
     @echo "安裝 golangci-lint..."
-    @curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin
+    @mkdir -p bin
+    GOBIN="$(pwd)/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
     @echo "安裝相依套件..."
     go mod download
     @echo "設定完成！"
@@ -52,6 +53,10 @@ test-cov:
 graphql:
     go get github.com/99designs/gqlgen@v0.17.85
     go run github.com/99designs/gqlgen generate
+
+# 生成 Swagger 文件
+swagger:
+    go run github.com/swaggo/swag/cmd/swag@v1.16.6 init
 
 # 清理
 clean:

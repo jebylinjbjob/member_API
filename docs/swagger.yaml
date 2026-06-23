@@ -31,6 +31,14 @@ definitions:
     - product_price
     - product_stock
     type: object
+  controllers.ForgotPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    required:
+    - email
+    type: object
   controllers.LoginRequest:
     properties:
       email:
@@ -82,6 +90,19 @@ definitions:
     - name
     - password
     type: object
+  controllers.ResetPasswordRequest:
+    properties:
+      password:
+        example: newpassword123
+        minLength: 6
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - password
+    - token
+    type: object
   controllers.UpdateProductRequest:
     properties:
       product_description:
@@ -106,8 +127,8 @@ definitions:
         example: user@example.com
         type: string
       id:
-        example: 1
-        type: integer
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       name:
         example: 張三
         type: string
@@ -127,6 +148,69 @@ info:
   title: Member API
   version: "1.0"
 paths:
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: 請求重設密碼，無論 email 是否存在皆回傳 202 Accepted
+      parameters:
+      - description: 電子郵件
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: 已接受請求
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 忘記密碼
+      tags:
+      - 認證
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: 使用 forgot-password 取得的 token 重設密碼
+      parameters:
+      - description: 重設密碼資訊
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重設成功
+        "400":
+          description: token 無效或密碼不符合規則
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 重設密碼
+      tags:
+      - 認證
   /health:
     get:
       consumes:

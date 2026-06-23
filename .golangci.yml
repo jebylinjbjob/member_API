@@ -26,6 +26,10 @@ linters:
     - whitespace
     - copyloopvar
     - predeclared
+  settings:
+    goconst:
+      ignore-tests: true
+      min-occurrences: 5
   exclusions:
     generated: lax
     presets:

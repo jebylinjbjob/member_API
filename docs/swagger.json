@@ -22,6 +22,102 @@
     "host": "localhost:9876",
     "basePath": "/api/v1",
     "paths": {
+        "/auth/forgot-password": {
+            "post": {
+                "description": "請求重設密碼，無論 email 是否存在皆回傳 202 Accepted",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "認證"
+                ],
+                "summary": "忘記密碼",
+                "parameters": [
+                    {
+                        "description": "電子郵件",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "已接受請求"
+                    },
+                    "400": {
+                        "description": "請求參數錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "服務器錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "使用 forgot-password 取得的 token 重設密碼",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "認證"
+                ],
+                "summary": "重設密碼",
+                "parameters": [
+                    {
+                        "description": "重設密碼資訊",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "重設成功"
+                    },
+                    "400": {
+                        "description": "token 無效或密碼不符合規則",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "服務器錯誤",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "檢查服務器狀態和數據庫連接狀態",
@@ -830,6 +926,18 @@
                 }
             }
         },
+        "controllers.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                }
+            }
+        },
         "controllers.LoginRequest": {
             "type": "object",
             "required": [
@@ -900,6 +1008,24 @@
                 }
             }
         },
+        "controllers.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "newpassword123"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
         "controllers.UpdateProductRequest": {
             "type": "object",
             "properties": {
@@ -933,8 +1059,8 @@
                     "example": "user@example.com"
                 },
                 "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "name": {
                     "type": "string",
